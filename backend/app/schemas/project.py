@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from pydantic import BaseModel, ConfigDict
 
 
@@ -7,7 +9,7 @@ class ProjectCreate(BaseModel):
 
 
 class ProjectResponse(BaseModel):
-    id: str
+    id: UUID
     name: str
     description: str | None = None
 

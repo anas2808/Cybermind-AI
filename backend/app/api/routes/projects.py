@@ -5,8 +5,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database.session import SessionLocal
-from app.models.project import Project
 from app.models.user import User
+from app.models.projects import Project
+from app.models.projects import Project
 from app.schemas.project import ProjectCreate, ProjectResponse
 from app.security.authentication import get_current_user
 

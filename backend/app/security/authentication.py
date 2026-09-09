@@ -4,6 +4,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from app.core.supabase import supabase
 
 
+
 security = HTTPBearer()
 
 
