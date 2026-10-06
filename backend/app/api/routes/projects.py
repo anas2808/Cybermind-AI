@@ -7,7 +7,6 @@ from sqlalchemy.orm import Session
 from app.database.session import SessionLocal
 from app.models.user import User
 from app.models.projects import Project
-from app.models.projects import Project
 from app.schemas.project import ProjectCreate, ProjectResponse
 from app.security.authentication import get_current_user
 
@@ -90,3 +89,37 @@ async def get_projects(
     ).scalars().all()
 
     return projects
+
+
+@router.get("/{project_id}", response_model=ProjectResponse)
+async def get_project(
+    project_id: uuid.UUID,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    user = db.execute(
+        select(User).where(
+            User.auth_user_id == current_user.id
+        )
+    ).scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="Project not found",
+        )
+
+    project = db.execute(
+        select(Project).where(
+            Project.id == project_id,
+            Project.owner_id == user.id,
+        )
+    ).scalar_one_or_none()
+
+    if not project:
+        raise HTTPException(
+            status_code=404,
+            detail="Project not found",
+        )
+
+    return project
