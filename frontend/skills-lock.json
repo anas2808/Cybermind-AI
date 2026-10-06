@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "fastapi-expert": {
+      "source": "nkseth/copilot-dev-skills",
+      "sourceType": "github",
+      "skillPath": "skills/fastapi-expert/SKILL.md",
+      "computedHash": "db598a1f3df6a484f2b76b3138b5c34ca49c6d360f920ae3c703bb6dbfab32c5"
+    }
+  }
+}

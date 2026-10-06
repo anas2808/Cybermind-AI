@@ -1,0 +1,6 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>CyberMind AI</title>
+  <rect width="64" height="64" rx="17" fill="#217EAA"/>
+  <path d="M40 19C37.5 17.25 34.6 16.25 31.5 16.25C22.94 16.25 16 23.19 16 31.75C16 40.31 22.94 47.25 31.5 47.25C34.6 47.25 37.5 46.25 40 44.5" stroke="#EEEEEE" stroke-width="4" stroke-linecap="round"/>
+  <path d="M43 24V39" stroke="#8CA4AC" stroke-width="4" stroke-linecap="round"/>
+</svg>
