@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ApiError, getProject, type Project } from '../../lib/api'
 
 type ProjectWorkspaceProps = {
@@ -11,21 +11,33 @@ export function ProjectWorkspace({ projectId, onBack, onProjectLoaded }: Project
   const [project, setProject] = useState<Project | null>(null)
   const [status, setStatus] = useState<'loading' | 'success' | 'not-found' | 'unauthorized' | 'error'>('loading')
   const [retryCount, setRetryCount] = useState(0)
+  const requestedKeyRef = useRef('')
+  const workspaceSections = [
+    { label: 'Overview', active: true },
+    { label: 'Code Review', active: false },
+    { label: 'Log Analysis', active: false },
+    { label: 'Threat Intelligence', active: false },
+    { label: 'Security Analysis', active: false },
+    { label: 'Reports', active: false },
+  ]
 
   useEffect(() => {
-    let isCurrent = true
+    const requestKey = `${projectId}:${retryCount}`
+    if (requestedKeyRef.current === requestKey) return
+    requestedKeyRef.current = requestKey
+
     setProject(null)
     setStatus('loading')
 
     getProject(projectId)
       .then((nextProject) => {
-        if (!isCurrent) return
+        if (requestedKeyRef.current !== requestKey) return
         setProject(nextProject)
         setStatus('success')
         onProjectLoaded(nextProject.name)
       })
       .catch((error: unknown) => {
-        if (!isCurrent) return
+        if (requestedKeyRef.current !== requestKey) return
         setStatus(error instanceof ApiError && error.status === 404
           ? 'not-found'
           : error instanceof ApiError && error.status === 401
@@ -33,10 +45,6 @@ export function ProjectWorkspace({ projectId, onBack, onProjectLoaded }: Project
             : 'error')
         onProjectLoaded('')
       })
-
-    return () => {
-      isCurrent = false
-    }
   }, [projectId, retryCount, onProjectLoaded])
 
   return (
@@ -54,15 +62,42 @@ export function ProjectWorkspace({ projectId, onBack, onProjectLoaded }: Project
       )}
 
       {status === 'success' && project && (
-        <section className="project-detail-surface" aria-labelledby="project-detail-title">
-          <p className="section-kicker">Project workspace</p>
-          <h2 id="project-detail-title">{project.name}</h2>
-          {project.description && <p className="project-detail-description">{project.description}</p>}
-          <div className="project-detail-context">
-            <strong>Project Workspace</strong>
-            <p>This is the workspace for this project.</p>
-          </div>
-        </section>
+        <div className="project-workspace-shell">
+          <header className="project-workspace-header">
+            <div>
+              <p className="section-kicker">Project workspace</p>
+              <h2 id="project-detail-title">{project.name}</h2>
+              {project.description && <p className="project-detail-description">{project.description}</p>}
+            </div>
+            <span className="project-workspace-status">Workspace ready</span>
+          </header>
+
+          <nav className="project-workspace-nav" aria-label="Project workspace sections">
+            {workspaceSections.map((section) => (
+              <button
+                type="button"
+                className={section.active ? 'project-workspace-nav-item project-workspace-nav-item-active' : 'project-workspace-nav-item'}
+                key={section.label}
+                disabled={!section.active}
+                aria-current={section.active ? 'page' : undefined}
+              >
+                {section.label}
+              </button>
+            ))}
+          </nav>
+
+          <section className="project-detail-surface project-overview-surface" aria-labelledby="project-overview-title">
+            <p className="section-kicker">Overview</p>
+            <h3 id="project-overview-title">Ready for security analysis</h3>
+            <p className="project-overview-copy">
+              This workspace is ready to organize future security analysis for {project.name}.
+            </p>
+            <div className="project-capability-note">
+              <strong>Analysis workspace</strong>
+              <p>Code review, log analysis, threat intelligence, and reporting will be connected in future phases.</p>
+            </div>
+          </section>
+        </div>
       )}
 
       {status === 'not-found' && (

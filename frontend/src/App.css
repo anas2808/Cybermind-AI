@@ -298,9 +298,23 @@ button { font: inherit; cursor: pointer; }
 .dialog-cancel-button { border: 1px solid var(--cm-border); color: var(--cm-muted); background: var(--cm-surface); }.dialog-submit-button { border: 0; color: #fff; background: var(--cm-primary); }.dialog-cancel-button:disabled, .dialog-close-button:disabled, .dialog-submit-button:disabled { cursor: wait; opacity: .6; }
 .project-detail-page { display: grid; gap: 18px; }
 .project-back-button { justify-self: start; padding: 0; border: 0; color: var(--cm-primary); background: transparent; font-size: .78rem; font-weight: 700; cursor: pointer; }
+.project-workspace-shell { display: grid; gap: 16px; }
+.project-workspace-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 22px 24px; border: 1px solid var(--cm-border); border-radius: 6px; background: var(--cm-surface); }
+.project-workspace-header h2 { margin: 0; color: var(--cm-text-strong); font-size: clamp(1.45rem, 3vw, 2rem); letter-spacing: -.04em; overflow-wrap: anywhere; }
+.project-workspace-status { flex: 0 0 auto; padding: 5px 9px; border: 1px solid #bde2d1; border-radius: 999px; color: #26764f; background: #effaf4; font-size: .62rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.project-workspace-nav { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px; border: 1px solid var(--cm-border); border-radius: 6px; background: var(--cm-surface); }
+.project-workspace-nav-item { min-height: 34px; padding: 0 12px; border: 1px solid transparent; border-radius: 4px; color: var(--cm-muted); background: transparent; font-size: .73rem; font-weight: 650; }
+.project-workspace-nav-item-active { border-color: rgba(33,126,170,.22); color: var(--cm-primary); background: #eaf5f9; }
+.project-workspace-nav-item:disabled:not(.project-workspace-nav-item-active) { cursor: default; opacity: .62; }
 .project-detail-surface { padding: clamp(22px, 4vw, 34px); border: 1px solid var(--cm-border); border-radius: 6px; background: var(--cm-surface); }
 .project-detail-surface h2 { margin: 0; color: var(--cm-text-strong); font-size: clamp(1.5rem, 3vw, 2rem); letter-spacing: -.04em; overflow-wrap: anywhere; }
 .project-detail-description { max-width: 680px; margin: 10px 0 0; color: var(--cm-muted); font-size: .88rem; line-height: 1.6; overflow-wrap: anywhere; }
+.project-overview-surface { min-height: 190px; }
+.project-overview-surface h3 { margin: 0; color: var(--cm-text-strong); font-size: 1.15rem; letter-spacing: -.02em; }
+.project-overview-copy { max-width: 650px; margin: 9px 0 0; color: var(--cm-muted); font-size: .84rem; line-height: 1.6; }
+.project-capability-note { max-width: 720px; margin-top: 27px; padding: 15px 17px; border-left: 3px solid var(--cm-secondary); background: var(--cm-surface-soft); }
+.project-capability-note strong { color: var(--cm-text); font-size: .76rem; }
+.project-capability-note p { margin: 5px 0 0; color: var(--cm-muted); font-size: .75rem; line-height: 1.5; }
 .project-detail-context { margin-top: 30px; padding-top: 18px; border-top: 1px solid var(--cm-border); }
 .project-detail-context strong { color: var(--cm-text); font-size: .78rem; }
 .project-detail-context p { margin: 6px 0 0; color: var(--cm-muted); font-size: .78rem; }
@@ -309,4 +323,4 @@ button { font: inherit; cursor: pointer; }
 .project-detail-error > p:not(.section-kicker) { margin: 9px 0 0; color: var(--cm-muted); font-size: .82rem; line-height: 1.5; }
 .project-detail-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 20px; }
 .project-detail-actions button { padding: 8px 12px; border: 0; border-radius: 4px; color: #fff; background: var(--cm-primary); font-size: .74rem; font-weight: 700; cursor: pointer; }
-@media (max-width: 640px) { .projects-page-intro { align-items: flex-start; flex-direction: column; gap: 8px; }.project-workspace-row { align-items: flex-start; flex-wrap: wrap; }.projects-list-panel { padding: 16px; } }
+@media (max-width: 640px) { .projects-page-intro { align-items: flex-start; flex-direction: column; gap: 8px; }.project-workspace-row { align-items: flex-start; flex-wrap: wrap; }.projects-list-panel { padding: 16px; }.project-workspace-header { flex-direction: column; padding: 19px; }.project-workspace-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }.project-workspace-nav-item { width: 100%; padding: 0 7px; font-size: .69rem; }.project-overview-surface { padding: 22px 19px; } }
