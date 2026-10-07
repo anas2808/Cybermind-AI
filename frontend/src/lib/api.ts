@@ -45,6 +45,11 @@ export async function getProjects(): Promise<Project[]> {
   return response.json() as Promise<Project[]>
 }
 
+export async function getProject(projectId: string): Promise<Project> {
+  const response = await authenticatedFetch(`/api/projects/${encodeURIComponent(projectId)}`)
+  return response.json() as Promise<Project>
+}
+
 export async function createProject(name: string, description: string): Promise<Project> {
   const response = await authenticatedFetch('/api/projects/', {
     method: 'POST',

@@ -6,9 +6,10 @@ type ProjectsPageProps = {
   apiStatus: 'loading' | 'success' | 'unauthorized' | 'error'
   onRetry: () => void
   onProjectCreated: () => void
+  onProjectOpen: (projectId: string) => void
 }
 
-export function ProjectsPage({ projects, apiStatus, onRetry, onProjectCreated }: ProjectsPageProps) {
+export function ProjectsPage({ projects, apiStatus, onRetry, onProjectCreated, onProjectOpen }: ProjectsPageProps) {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -103,14 +104,14 @@ export function ProjectsPage({ projects, apiStatus, onRetry, onProjectCreated }:
         {apiStatus === 'success' && projects.length > 0 && (
           <div className="projects-list">
             {projects.map((project) => (
-              <article className="project-workspace-row" key={project.id}>
+              <button type="button" className="project-workspace-row" key={project.id} onClick={() => onProjectOpen(project.id)}>
                 <span className="project-file-icon">▤</span>
                 <div className="project-workspace-copy">
                   <h4>{project.name}</h4>
                   <p>{project.description || 'Security analysis project.'}</p>
                   <span><i /> Active project</span>
                 </div>
-              </article>
+              </button>
             ))}
           </div>
         )}

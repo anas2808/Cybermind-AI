@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ApiError, getProjects, type Project } from '../../lib/api'
 import { DashboardHome } from '../../pages/dashboard/DashboardHome'
+import { ProjectWorkspace } from '../../pages/dashboard/ProjectWorkspace'
 import { ProjectsPage } from '../../pages/dashboard/ProjectsPage'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
@@ -29,13 +30,26 @@ const workspaceRoutes = new Set([
   'settings',
 ])
 
-function workspaceFromHash() {
-  const route = window.location.hash.replace(/^#\//, '')
-  return workspaceRoutes.has(route) ? route : 'dashboard'
+type WorkspaceRoute = {
+  workspace: string
+  projectId?: string
 }
 
-function updateWorkspaceUrl(id: string) {
-  const nextHash = `#/${id}`
+function routeFromHash(): WorkspaceRoute {
+  const route = window.location.hash.replace(/^#\//, '')
+  const projectMatch = route.match(/^projects\/([^/]+)$/)
+  if (projectMatch) {
+    try {
+      return { workspace: 'projects', projectId: decodeURIComponent(projectMatch[1]) }
+    } catch {
+      return { workspace: 'dashboard' }
+    }
+  }
+  return { workspace: workspaceRoutes.has(route) ? route : 'dashboard' }
+}
+
+function updateWorkspaceUrl(id: string, projectId?: string) {
+  const nextHash = projectId ? `#/projects/${encodeURIComponent(projectId)}` : `#/${id}`
   if (window.location.hash !== nextHash) {
     window.location.hash = nextHash
   }
@@ -47,28 +61,33 @@ export function DashboardShell({
   isSigningOut,
   onSignOut,
 }: DashboardShellProps) {
-  const [activeItem, setActiveItem] = useState(() => workspaceFromHash())
+  const [route, setRoute] = useState<WorkspaceRoute>(() => routeFromHash())
+  const [projectTitle, setProjectTitle] = useState('')
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [projects, setProjects] = useState<Project[]>([])
   const [apiStatus, setApiStatus] = useState<'loading' | 'success' | 'unauthorized' | 'error'>('loading')
   const requestIdRef = useRef(0)
 
   useEffect(() => {
-    loadProjects()
-  }, [])
+    if (!route.projectId) {
+      loadProjects()
+    }
+  }, [route.projectId])
 
   useEffect(() => {
     function handleHashChange() {
-      setActiveItem(workspaceFromHash())
+      setRoute(routeFromHash())
+      setProjectTitle('')
     }
 
-    if (window.location.hash !== `#/${activeItem}`) {
-      window.history.replaceState({}, '', `#/${activeItem}`)
+    const currentRoute = routeFromHash()
+    if (currentRoute.workspace !== route.workspace || currentRoute.projectId !== route.projectId) {
+      window.history.replaceState({}, '', route.projectId ? `#/projects/${encodeURIComponent(route.projectId)}` : `#/${route.workspace}`)
     }
 
     window.addEventListener('hashchange', handleHashChange)
     return () => window.removeEventListener('hashchange', handleHashChange)
-  }, [activeItem])
+  }, [route])
 
   function loadProjects() {
     const requestId = requestIdRef.current + 1
@@ -87,12 +106,15 @@ export function DashboardShell({
   }
 
   function handleNavigation(item: NavigationItem) {
-    setActiveItem(item.id)
     updateWorkspaceUrl(item.id)
+    setRoute({ workspace: item.id })
     setIsSidebarOpen(false)
   }
 
-  const activeLabel = activeItem === 'dashboard'
+  const activeItem = route.workspace
+  const activeLabel = route.projectId
+    ? projectTitle || 'Project Workspace'
+    : activeItem === 'dashboard'
     ? 'Dashboard'
     : activeItem === 'projects'
       ? 'Projects'
@@ -126,8 +148,23 @@ export function DashboardShell({
               apiStatus={apiStatus}
               onViewProjects={() => handleNavigation({ id: 'projects', label: 'Projects', available: true })}
             />
+          ) : activeItem === 'projects' && route.projectId ? (
+            <ProjectWorkspace
+              projectId={route.projectId}
+              onBack={() => handleNavigation({ id: 'projects', label: 'Projects', available: true })}
+              onProjectLoaded={setProjectTitle}
+            />
           ) : activeItem === 'projects' ? (
-            <ProjectsPage projects={projects} apiStatus={apiStatus} onRetry={loadProjects} onProjectCreated={loadProjects} />
+            <ProjectsPage
+              projects={projects}
+              apiStatus={apiStatus}
+              onRetry={loadProjects}
+              onProjectCreated={loadProjects}
+              onProjectOpen={(projectId) => {
+                updateWorkspaceUrl('projects', projectId)
+                setRoute({ workspace: 'projects', projectId })
+              }}
+            />
           ) : (
             <section className="module-empty-state">
               <span className="empty-state-kicker">Module queued</span>
