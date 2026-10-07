@@ -97,22 +97,12 @@ async def get_project(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    user = db.execute(
-        select(User).where(
-            User.auth_user_id == current_user.id
-        )
-    ).scalar_one_or_none()
-
-    if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="Project not found",
-        )
-
     project = db.execute(
-        select(Project).where(
+        select(Project)
+        .join(User, Project.owner_id == User.id)
+        .where(
             Project.id == project_id,
-            Project.owner_id == user.id,
+            User.auth_user_id == current_user.id,
         )
     ).scalar_one_or_none()
 
