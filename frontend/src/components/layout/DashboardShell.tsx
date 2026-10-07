@@ -152,7 +152,10 @@ export function DashboardShell({
             <ProjectWorkspace
               projectId={route.projectId}
               onBack={() => handleNavigation({ id: 'projects', label: 'Projects', available: true })}
-              onProjectLoaded={setProjectTitle}
+              onProjectLoaded={(projectName) => {
+                setProjectTitle(projectName)
+                setApiStatus(projectName ? 'success' : 'error')
+              }}
             />
           ) : activeItem === 'projects' ? (
             <ProjectsPage
