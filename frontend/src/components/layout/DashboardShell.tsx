@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ApiError, getProjects, type Project } from '../../lib/api'
 import { DashboardHome } from '../../pages/dashboard/DashboardHome'
+import { AIProvidersPage } from '../../pages/dashboard/AIProvidersPage'
 import { ProjectWorkspace } from '../../pages/dashboard/ProjectWorkspace'
 import { ProjectsPage } from '../../pages/dashboard/ProjectsPage'
 import { Sidebar } from './Sidebar'
@@ -168,6 +169,8 @@ export function DashboardShell({
                 setRoute({ workspace: 'projects', projectId })
               }}
             />
+          ) : activeItem === 'settings' ? (
+            <AIProvidersPage />
           ) : (
             <section className="module-empty-state">
               <span className="empty-state-kicker">Module queued</span>
