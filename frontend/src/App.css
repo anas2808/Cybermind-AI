@@ -390,3 +390,20 @@ button { font: inherit; cursor: pointer; }
 .project-feature-card strong { color: var(--cm-text); font-size: .67rem; }
 .project-feature-card ul { display: grid; gap: 4px; margin: 6px 0 0; padding-left: 17px; color: var(--cm-muted); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .62rem; line-height: 1.45; }
 @media (max-width: 760px) { .project-analysis-heading { flex-direction: column; } .project-analysis-controls { grid-template-columns: 1fr; } .project-feature-list { grid-template-columns: 1fr; } }
+
+
+.project-feature-card { width: 100%; border: 1px solid #dbe6eb; border-radius: 5px; text-align: left; cursor: pointer; }
+.project-feature-card-selected { border-color: #7d9cb7; box-shadow: 0 0 0 2px rgba(125,156,183,.12); }
+.project-feature-selection { display: grid; gap: 15px; }
+.project-file-selection-list { display: grid; gap: 7px; }
+.project-file-selection-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #dbe6eb; border-radius: 4px; background: var(--cm-surface-soft); color: var(--cm-text); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .65rem; cursor: pointer; }
+.project-file-selection-item input { width: 15px; height: 15px; accent-color: #217eaa; }
+.project-feature-selection-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--cm-muted); font-size: .67rem; }
+.project-security-findings { display: grid; gap: 9px; }
+.project-security-finding { display: grid; gap: 9px; padding: 14px; border: 1px solid #dbe6eb; border-radius: 5px; background: var(--cm-surface-soft); }
+.project-security-finding-top { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.project-security-finding-top strong { color: var(--cm-text-strong); font-size: .78rem; }
+.project-security-finding-top span { padding: 4px 7px; border-radius: 999px; background: #edf2f4; color: #527489; font-size: .59rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+.project-security-finding p { margin: 0; color: var(--cm-muted); font-size: .68rem; line-height: 1.5; }
+.project-security-finding > div:not(.project-security-finding-top) { display: grid; gap: 4px; }
+.project-security-finding > div strong { color: var(--cm-text); font-size: .65rem; }
