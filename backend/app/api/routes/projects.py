@@ -59,6 +59,7 @@ async def create_project(
         owner_id=user.id,
         name=project_data.name,
         description=project_data.description,
+        repository_url=project_data.repository_url,
     )
 
     db.add(project)
