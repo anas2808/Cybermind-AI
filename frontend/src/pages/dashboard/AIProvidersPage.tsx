@@ -201,8 +201,8 @@ export function AIProvidersPage({ onProvidersChanged }: AIProvidersPageProps) {
 
 function AddProviderDialog({ onClose, onCreated }: { onClose: () => void; onCreated: () => Promise<void> }) {
   const [name, setName] = useState('')
-  const [providerType, setProviderType] = useState('ollama')
-  const [endpoint, setEndpoint] = useState('http://localhost:11434')
+  const [providerType, setProviderType] = useState('openai_compatible')
+  const [endpoint, setEndpoint] = useState('https://api.example.com/v1')
   const [apiKey, setApiKey] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
@@ -255,11 +255,14 @@ function AddProviderDialog({ onClose, onCreated }: { onClose: () => void; onCrea
         <form onSubmit={handleSubmit}>
           <label htmlFor="ai-provider-name">Name</label>
           <input id="ai-provider-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="My Ollama" autoFocus />
-          <label htmlFor="ai-provider-type">Provider type</label>
-          <input id="ai-provider-type" value={providerType} onChange={(event) => setProviderType(event.target.value)} placeholder="ollama" />
-          <p className="field-message">Use a provider adapter type supported by the backend. Ollama is available in this first implementation.</p>
+          <label htmlFor="ai-provider-type">API protocol</label>
+          <select id="ai-provider-type" value={providerType} onChange={(event) => setProviderType(event.target.value)}>
+            <option value="openai_compatible">OpenAI-compatible API</option>
+            <option value="ollama">Ollama API</option>
+          </select>
+          <p className="field-message">Choose the API protocol exposed by the service. The provider name is only a label; CyberMind does not lock you to a vendor.</p>
           <label htmlFor="ai-provider-endpoint">Endpoint</label>
-          <input id="ai-provider-endpoint" type="url" value={endpoint} onChange={(event) => setEndpoint(event.target.value)} placeholder="http://localhost:11434" />
+          <input id="ai-provider-endpoint" type="url" value={endpoint} onChange={(event) => setEndpoint(event.target.value)} placeholder={providerType === 'ollama' ? 'http://localhost:11434' : 'https://api.example.com/v1'} />
           <label htmlFor="ai-provider-key">API key <span className="ai-provider-optional">(optional)</span></label>
           <input id="ai-provider-key" type="password" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="Stored encrypted by the backend" autoComplete="new-password" />
           {error && <p className="project-form-error" role="alert">{error}</p>}
