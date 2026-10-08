@@ -16,6 +16,12 @@ type AIProvidersPageProps = {
   onProvidersChanged?: () => void
 }
 
+function providerMeta(providerType: string) {
+  if (providerType === 'ollama') return { label: 'LOCAL', icon: 'O', description: 'Local model runtime' }
+  if (providerType === 'openai_compatible') return { label: 'API', icon: 'A', description: 'OpenAI-compatible endpoint' }
+  return { label: 'CUSTOM', icon: '↗', description: 'Custom AI endpoint' }
+}
+
 export function AIProvidersPage({ onProvidersChanged }: AIProvidersPageProps) {
   const [providers, setProviders] = useState<AIProvider[]>([])
   const [models, setModels] = useState<Record<string, AIModel[]>>({})
@@ -133,18 +139,32 @@ export function AIProvidersPage({ onProvidersChanged }: AIProvidersPageProps) {
         </div>
       ) : (
         <div className="ai-provider-list">
-          {providers.map((provider) => (
+          {providers.map((provider) => {
+            const meta = providerMeta(provider.provider_type)
+            const providerModels = models[provider.id] || []
+            return (
             <article className="ai-provider-card" key={provider.id}>
               <div className="ai-provider-card-head">
-                <div>
-                  <p className="ai-provider-type">{provider.provider_type}</p>
-                  <h3>{provider.name}</h3>
-                  <p className="ai-provider-endpoint">{provider.endpoint}</p>
+                <div className="ai-provider-identity">
+                  <span className="ai-provider-logo" aria-hidden="true">{meta.icon}</span>
+                  <div>
+                    <div className="ai-provider-title-row">
+                      <p className="ai-provider-type">{meta.label}</p>
+                      <span className="ai-provider-kind">{meta.description}</span>
+                    </div>
+                    <h3>{provider.name}</h3>
+                    <p className="ai-provider-endpoint">{provider.endpoint}</p>
+                  </div>
                 </div>
                 <span className={provider.connection_status === 'connected' ? 'ai-provider-status ai-provider-status-ok' : 'ai-provider-status'}>
                   <i aria-hidden="true" />
                   {provider.connection_status}
                 </span>
+              </div>
+              <div className="ai-provider-summary">
+                <div><span>Models</span><strong>{providerModels.length}</strong></div>
+                <div><span>Auth</span><strong>{provider.auth_type === 'api_key' ? 'API key' : 'None'}</strong></div>
+                <div><span>State</span><strong>{provider.enabled ? 'Enabled' : 'Disabled'}</strong></div>
               </div>
 
               <div className="ai-provider-actions">
@@ -164,9 +184,9 @@ export function AIProvidersPage({ onProvidersChanged }: AIProvidersPageProps) {
                   <strong>Available models</strong>
                   <span>{(models[provider.id] || []).length}</span>
                 </div>
-                {(models[provider.id] || []).length > 0 ? (
+                {providerModels.length > 0 ? (
                   <ul>
-                    {(models[provider.id] || []).map((model) => (
+                    {providerModels.map((model) => (
                       <li key={model.id}>
                         <span>
                           <strong>{model.display_name}</strong>
@@ -181,7 +201,8 @@ export function AIProvidersPage({ onProvidersChanged }: AIProvidersPageProps) {
                 )}
               </div>
             </article>
-          ))}
+            )
+          })}
         </div>
       )}
 
@@ -247,20 +268,25 @@ function AddProviderDialog({ onClose, onCreated }: { onClose: () => void; onCrea
       <section className="project-dialog ai-provider-dialog" role="dialog" aria-modal="true" aria-labelledby="add-ai-provider-title">
         <div className="project-dialog-heading">
           <div>
-            <p className="section-kicker">Provider setup</p>
-            <h3 id="add-ai-provider-title">Add AI Provider</h3>
+            <p className="section-kicker">AI configuration</p>
+            <h3 id="add-ai-provider-title">Connect an AI provider</h3>
+            <p className="ai-provider-dialog-subtitle">Add a local, cloud, LAN, or compatible AI endpoint to CyberMind.</p>
           </div>
           <button type="button" className="dialog-close-button" aria-label="Close dialog" onClick={onClose} disabled={isSaving}>×</button>
         </div>
         <form onSubmit={handleSubmit}>
           <label htmlFor="ai-provider-name">Name</label>
           <input id="ai-provider-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="My Ollama" autoFocus />
-          <label htmlFor="ai-provider-type">API protocol</label>
-          <select id="ai-provider-type" value={providerType} onChange={(event) => setProviderType(event.target.value)}>
-            <option value="openai_compatible">OpenAI-compatible API</option>
-            <option value="ollama">Ollama API</option>
-          </select>
-          <p className="field-message">Choose the API protocol exposed by the service. The provider name is only a label; CyberMind does not lock you to a vendor.</p>
+          <div className="ai-provider-dialog-label">Connection type</div>
+          <div className="ai-provider-type-options" role="radiogroup" aria-label="AI provider connection type">
+            <button type="button" className={providerType === 'ollama' ? 'ai-provider-type-option ai-provider-type-option-active' : 'ai-provider-type-option'} onClick={() => setProviderType('ollama')}>
+              <span className="ai-provider-option-icon">O</span><span><strong>Ollama</strong><small>Local runtime</small></span>
+            </button>
+            <button type="button" className={providerType === 'openai_compatible' ? 'ai-provider-type-option ai-provider-type-option-active' : 'ai-provider-type-option'} onClick={() => setProviderType('openai_compatible')}>
+              <span className="ai-provider-option-icon">A</span><span><strong>OpenAI-compatible</strong><small>Cloud or LAN API</small></span>
+            </button>
+          </div>
+          <p className="field-message">Select the API protocol exposed by your service. The provider name is only a label; CyberMind stays vendor-neutral.</p>
           <label htmlFor="ai-provider-endpoint">Endpoint</label>
           <input id="ai-provider-endpoint" type="url" value={endpoint} onChange={(event) => setEndpoint(event.target.value)} placeholder={providerType === 'ollama' ? 'http://localhost:11434' : 'https://api.example.com/v1'} />
           <label htmlFor="ai-provider-key">API key <span className="ai-provider-optional">(optional)</span></label>
