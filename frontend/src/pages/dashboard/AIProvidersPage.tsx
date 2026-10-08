@@ -206,6 +206,33 @@ export function AIProvidersPage({ onProvidersChanged }: AIProvidersPageProps) {
         </div>
       )}
 
+      {!isLoading && (
+        <section className="ai-provider-add-panel" aria-labelledby="ai-provider-add-heading">
+          <div className="ai-provider-add-copy">
+            <div className="ai-provider-add-icon" aria-hidden="true">+</div>
+            <div>
+              <p className="section-kicker">Provider catalog</p>
+              <h3 id="ai-provider-add-heading">Add a new AI provider</h3>
+              <p>Connect a local runtime, cloud API, LAN service, or another OpenAI-compatible endpoint.</p>
+            </div>
+          </div>
+          <div className="ai-provider-add-options">
+            <button type="button" onClick={() => setShowAdd(true)}>
+              <span className="ai-provider-option-icon">O</span>
+              <span><strong>Ollama</strong><small>Local</small></span>
+            </button>
+            <button type="button" onClick={() => setShowAdd(true)}>
+              <span className="ai-provider-option-icon">A</span>
+              <span><strong>OpenAI-compatible</strong><small>Cloud / LAN</small></span>
+            </button>
+            <button type="button" onClick={() => setShowAdd(true)}>
+              <span className="ai-provider-option-icon">↗</span>
+              <span><strong>Custom endpoint</strong><small>HTTP API</small></span>
+            </button>
+          </div>
+        </section>
+      )}
+
       {showAdd && (
         <AddProviderDialog
           onClose={() => setShowAdd(false)}
