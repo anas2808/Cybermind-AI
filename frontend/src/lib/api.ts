@@ -168,3 +168,40 @@ export type ProjectStructureAnalysis = {
   technologies: string[]
   features: ProjectFeature[]
 }
+
+export type SecurityFinding = {
+  title: string
+  severity: string
+  description: string
+  evidence: string
+  recommendation: string
+}
+
+export type FeatureSecurityAnalysis = {
+  project_id: string
+  provider_id: string
+  model_id: string
+  feature_name: string
+  files: string[]
+  findings: SecurityFinding[]
+}
+
+export async function analyzeFeatureSecurity(
+  projectId: string,
+  providerId: string,
+  modelId: string,
+  featureName: string,
+  files: string[],
+): Promise<FeatureSecurityAnalysis> {
+  const response = await authenticatedFetch(`/api/projects/${encodeURIComponent(projectId)}/analysis/feature`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      provider_id: providerId,
+      model_id: modelId,
+      feature_name: featureName,
+      files,
+    }),
+  })
+  return parseResponse<FeatureSecurityAnalysis>(response)
+}
