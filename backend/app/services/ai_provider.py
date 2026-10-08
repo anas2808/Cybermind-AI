@@ -1,6 +1,5 @@
 import base64
 import json
-import time
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -10,13 +9,14 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.ai.adapters.ollama import OllamaAdapter
+from app.ai.adapters.openai_compatible import OpenAICompatibleAdapter
 from app.ai.gateway import AIGateway
 from app.core.config import settings
 from app.models.ai_provider import AIModel, AIProvider
 from app.models.user import User
 
 
-gateway = AIGateway([OllamaAdapter()])
+gateway = AIGateway([OllamaAdapter(), OpenAICompatibleAdapter()])
 
 
 def _get_cipher() -> Fernet:
