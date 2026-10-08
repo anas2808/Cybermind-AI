@@ -53,8 +53,8 @@ export function ProjectWorkspace({ projectId, onBack, onProjectLoaded }: Project
 
   useEffect(() => {
     let cancelled = false
-    Promise.all([getAIProviders(), getAIProviders().catch(() => [])])
-      .then(async ([nextProviders]) => {
+    getAIProviders()
+      .then(async (nextProviders) => {
         if (cancelled) return
         setProviders(nextProviders)
         const entries = await Promise.all(nextProviders.map(async (provider) => [provider.id, await getAIProviderModels(provider.id)] as const))
