@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   ApiError,
+  analyzeFeatureSecurity,
   analyzeProjectStructure,
   getAIProviderModels,
   getAIProviders,
@@ -8,6 +9,7 @@ import {
   type AIModel,
   type AIProvider,
   type Project,
+  type FeatureSecurityAnalysis,
   type ProjectStructureAnalysis,
 } from '../../lib/api'
 
@@ -28,6 +30,11 @@ export function ProjectWorkspace({ projectId, onBack, onProjectLoaded }: Project
   const [analysis, setAnalysis] = useState<ProjectStructureAnalysis | null>(null)
   const [analysisStatus, setAnalysisStatus] = useState<'idle' | 'loading' | 'error'>('idle')
   const [analysisError, setAnalysisError] = useState('')
+  const [selectedFeature, setSelectedFeature] = useState('')
+  const [selectedFiles, setSelectedFiles] = useState<string[]>([])
+  const [featureAnalysis, setFeatureAnalysis] = useState<FeatureSecurityAnalysis | null>(null)
+  const [featureStatus, setFeatureStatus] = useState<'idle' | 'loading' | 'error'>('idle')
+  const [featureError, setFeatureError] = useState('')
   const requestedKeyRef = useRef('')
 
   useEffect(() => {
@@ -80,6 +87,24 @@ export function ProjectWorkspace({ projectId, onBack, onProjectLoaded }: Project
     setSelectedModelId((models[providerId] || [])[0]?.id || '')
   }
 
+  function toggleFile(file: string) {
+    setSelectedFiles((current) => current.includes(file) ? current.filter((item) => item !== file) : [...current, file])
+  }
+
+  async function handleFeatureAnalysis() {
+    if (!project || !selectedProviderId || !selectedModelId || !selectedFeature || selectedFiles.length === 0) return
+    setFeatureStatus('loading')
+    setFeatureError('')
+    try {
+      const result = await analyzeFeatureSecurity(project.id, selectedProviderId, selectedModelId, selectedFeature, selectedFiles)
+      setFeatureAnalysis(result)
+      setFeatureStatus('idle')
+    } catch {
+      setFeatureStatus('error')
+      setFeatureError('Feature security analysis failed. Check the provider connection and try again.')
+    }
+  }
+
   async function handleStructureAnalysis() {
     if (!project || !selectedProviderId || !selectedModelId) return
     setAnalysisStatus('loading')
@@ -87,6 +112,10 @@ export function ProjectWorkspace({ projectId, onBack, onProjectLoaded }: Project
     try {
       const result = await analyzeProjectStructure(project.id, selectedProviderId, selectedModelId)
       setAnalysis(result)
+      setSelectedFeature('')
+      setSelectedFiles([])
+      setFeatureAnalysis(null)
+      setFeatureStatus('idle')
       setAnalysisStatus('idle')
     } catch (error: unknown) {
       setAnalysisStatus('error')
@@ -175,8 +204,32 @@ export function ProjectWorkspace({ projectId, onBack, onProjectLoaded }: Project
           </section>
 
           {analysis && (
-            <StructureResult analysis={analysis} />
+            <>
+              <StructureResult
+                analysis={analysis}
+                selectedFeature={selectedFeature}
+                selectedFiles={selectedFiles}
+                onFeatureChange={(feature) => {
+                  setSelectedFeature(feature.name)
+                  setSelectedFiles([])
+                  setFeatureAnalysis(null)
+                  setFeatureError('')
+                }}
+              />
+              {selectedFeature && (
+                <FeatureFileSelection
+                  analysis={analysis}
+                  selectedFeature={selectedFeature}
+                  selectedFiles={selectedFiles}
+                  onToggle={toggleFile}
+                  onAnalyze={() => void handleFeatureAnalysis()}
+                  isLoading={featureStatus === 'loading'}
+                  error={featureError}
+                />
+              )}
+            </>
           )}
+          {featureAnalysis && <FeatureSecurityResult analysis={featureAnalysis} />}
         </div>
       )}
 
@@ -187,16 +240,21 @@ export function ProjectWorkspace({ projectId, onBack, onProjectLoaded }: Project
   )
 }
 
-function StructureResult({ analysis }: { analysis: ProjectStructureAnalysis }) {
+function StructureResult({ analysis, selectedFeature, selectedFiles, onFeatureChange }: {
+  analysis: ProjectStructureAnalysis
+  selectedFeature: string
+  selectedFiles: string[]
+  onFeatureChange: (feature: ProjectStructureAnalysis['features'][number]) => void
+}) {
   return (
     <section className="project-analysis-result project-detail-surface">
       <div className="project-analysis-heading">
         <div>
           <p className="section-kicker">Structure map</p>
-          <h3>Project features</h3>
+          <h3>Select a feature</h3>
           <p>{analysis.summary}</p>
         </div>
-        <span className="project-analysis-step">{analysis.features.length} features</span>
+        <span className="project-analysis-step">02 / Feature</span>
       </div>
       {analysis.technologies.length > 0 && (
         <div className="project-analysis-tech">
@@ -205,15 +263,63 @@ function StructureResult({ analysis }: { analysis: ProjectStructureAnalysis }) {
       )}
       <div className="project-feature-list">
         {analysis.features.map((feature) => (
-          <article className="project-feature-card" key={feature.name}>
-            <div>
-              <h4>{feature.name}</h4>
-              <p>{feature.purpose || 'No additional purpose was provided.'}</p>
-            </div>
-            <div>
-              <strong>Files</strong>
-              <ul>{feature.files.map((file) => <li key={file}>{file}</li>)}</ul>
-            </div>
+          <button type="button" className={selectedFeature === feature.name ? 'project-feature-card project-feature-card-selected' : 'project-feature-card'} key={feature.name} onClick={() => onFeatureChange(feature)}>
+            <div><h4>{feature.name}</h4><p>{feature.purpose || 'No additional purpose was provided.'}</p></div>
+            <div><strong>{feature.files.length} files</strong><p>{selectedFeature === feature.name ? selectedFiles.length + ' selected' : 'Select to review files'}</p></div>
+          </button>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function FeatureFileSelection({ analysis, selectedFeature, selectedFiles, onToggle, onAnalyze, isLoading, error }: {
+  analysis: ProjectStructureAnalysis
+  selectedFeature: string
+  selectedFiles: string[]
+  onToggle: (file: string) => void
+  onAnalyze: () => void
+  isLoading: boolean
+  error: string
+}) {
+  const feature = analysis.features.find((item) => item.name === selectedFeature)
+  if (!feature) return null
+  return (
+    <section className="project-feature-selection project-detail-surface">
+      <div className="project-analysis-heading">
+        <div><p className="section-kicker">Selected feature</p><h3>{feature.name}</h3><p>Choose the exact files to send through GitIngest for security analysis.</p></div>
+        <span className="project-analysis-step">03 / Files</span>
+      </div>
+      <div className="project-file-selection-list">
+        {feature.files.map((file) => (
+          <label key={file} className="project-file-selection-item">
+            <input type="checkbox" checked={selectedFiles.includes(file)} onChange={() => onToggle(file)} />
+            <span>{file}</span>
+          </label>
+        ))}
+      </div>
+      {error && <p className="project-form-error" role="alert">{error}</p>}
+      <div className="project-feature-selection-actions">
+        <span>{selectedFiles.length} selected</span>
+        <button type="button" className="dialog-submit-button" disabled={selectedFiles.length === 0 || isLoading} onClick={onAnalyze}>
+          {isLoading ? 'Analyzing feature...' : 'Analyze feature security'}
+        </button>
+      </div>
+    </section>
+  )
+}
+
+function FeatureSecurityResult({ analysis }: { analysis: FeatureSecurityAnalysis }) {
+  return (
+    <section className="project-analysis-result project-detail-surface">
+      <div className="project-analysis-heading"><div><p className="section-kicker">Security analysis</p><h3>{analysis.feature_name}</h3><p>Evidence is limited to the selected files.</p></div><span className="project-analysis-step">{analysis.findings.length} findings</span></div>
+      <div className="project-security-findings">
+        {analysis.findings.length === 0 ? <p className="project-analysis-hint">No security findings were returned for the selected files.</p> : analysis.findings.map((finding, index) => (
+          <article className="project-security-finding" key={finding.title + index}>
+            <div className="project-security-finding-top"><strong>{finding.title}</strong><span>{finding.severity}</span></div>
+            <p>{finding.description}</p>
+            <div><strong>Evidence</strong><p>{finding.evidence}</p></div>
+            <div><strong>Recommendation</strong><p>{finding.recommendation}</p></div>
           </article>
         ))}
       </div>
