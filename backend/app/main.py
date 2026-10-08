@@ -6,6 +6,7 @@ from app.database.connection import engine
 from app.api.routes.auth import router as auth_router
 from app.api.routes.projects import router as projects_router
 from app.api.routes.ai_providers import router as ai_providers_router
+from app.api.routes.project_analysis import router as project_analysis_router
 
 app = FastAPI(
     title="CyberMind AI",
@@ -17,6 +18,7 @@ app.include_router(health_router)
 app.include_router(auth_router)
 app.include_router(projects_router)
 app.include_router(ai_providers_router)
+app.include_router(project_analysis_router)
 
 
 @app.get("/")
