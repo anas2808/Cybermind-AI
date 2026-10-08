@@ -4,6 +4,7 @@ export type Project = {
   id: string
   name: string
   description: string | null
+  repository_url: string | null
 }
 
 export class ApiError extends Error {
@@ -50,13 +51,13 @@ export async function getProject(projectId: string): Promise<Project> {
   return response.json() as Promise<Project>
 }
 
-export async function createProject(name: string, description: string): Promise<Project> {
+export async function createProject(name: string, description: string, repositoryUrl = ''): Promise<Project> {
   const response = await authenticatedFetch('/api/projects/', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ name, description: description || null }),
+    body: JSON.stringify({ name, description: description || null, repository_url: repositoryUrl || null }),
   })
 
   return response.json() as Promise<Project>
@@ -140,4 +141,30 @@ export async function deleteAIProvider(providerId: string): Promise<void> {
   await authenticatedFetch(`/api/ai/providers/${encodeURIComponent(providerId)}`, {
     method: 'DELETE',
   })
+}
+
+export async function analyzeProjectStructure(projectId: string, providerId: string, modelId: string) {
+  const response = await authenticatedFetch(`/api/projects/${encodeURIComponent(projectId)}/analysis/structure`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ provider_id: providerId, model_id: modelId }),
+  })
+  return parseResponse<ProjectStructureAnalysis>(response)
+}
+
+export type ProjectFeature = {
+  name: string
+  purpose: string
+  files: string[]
+  related_features: string[]
+}
+
+export type ProjectStructureAnalysis = {
+  project_id: string
+  provider_id: string
+  model_id: string
+  summary: string
+  tree: string
+  technologies: string[]
+  features: ProjectFeature[]
 }
