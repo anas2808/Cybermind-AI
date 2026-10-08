@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import type { FormEvent } from 'react'
 import {
   ApiError,
   createAIProvider,
@@ -214,7 +215,7 @@ function AddProviderDialog({ onClose, onCreated }: { onClose: () => void; onCrea
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isSaving, onClose])
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const cleanName = name.trim()
     const cleanEndpoint = endpoint.trim()
