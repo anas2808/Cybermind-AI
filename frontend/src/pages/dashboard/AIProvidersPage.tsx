@@ -67,21 +67,28 @@ function getProviderBrand(provider: AIProvider): ProviderBrand | null {
 
 function ProviderBrandIcon({ provider, fallback, size = 27 }: { provider: AIProvider; fallback: IconName; size?: number }) {
   const brand = getProviderBrand(provider)
-  const [imageFailed, setImageFailed] = useState(false)
+  const [sourceIndex, setSourceIndex] = useState(0)
 
-  if (!brand || imageFailed) return <Icon name={fallback} size={size} />
+  if (!brand || sourceIndex > 1) return <Icon name={fallback} size={size} />
+
+  // Use two independent CDNs so a blocked or unavailable primary host does not
+  // immediately replace a known provider logo with the generic fallback.
+  const sources = [
+    `https://cdn.simpleicons.org/${brand.slug}`,
+    `https://cdn.jsdelivr.net/npm/simple-icons@v14/icons/${brand.slug}.svg`,
+  ]
 
   return <img
     className="ai-reference-brand-image"
-    src={`https://cdn.simpleicons.org/${brand.slug}`}
+    src={sources[sourceIndex]}
     alt=""
     aria-label={`${brand.label} logo`}
-    title={`${brand.label} detected from provider name or endpoint`}
+    title={`${brand.label} logo`}
     width={size}
     height={size}
-    loading="lazy"
+    loading="eager"
     referrerPolicy="no-referrer"
-    onError={() => setImageFailed(true)}
+    onError={() => setSourceIndex((current) => current + 1)}
   />
 }
 
