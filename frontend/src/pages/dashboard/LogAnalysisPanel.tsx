@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { analyzeSecurityLogs, getAIProviderModels, getAIProviders, type AIModel, type AIProvider, type LogAnalysisResult } from '../../lib/api'
 
 type LogEvent = { id: number; line: number; timestamp: string; severity: 'critical' | 'high' | 'medium' | 'low' | 'info'; source: string; message: string; raw: string }
 const patterns: Array<{ severity: LogEvent['severity']; regex: RegExp }> = [
@@ -26,6 +27,16 @@ export function LogAnalysisPanel() {
   const [query, setQuery] = useState('')
   const [severity, setSeverity] = useState('all')
   const [error, setError] = useState('')
+  const [providers, setProviders] = useState<AIProvider[]>([])
+  const [models, setModels] = useState<AIModel[]>([])
+  const [providerId, setProviderId] = useState('')
+  const [modelId, setModelId] = useState('')
+  const [aiResult, setAiResult] = useState<LogAnalysisResult | null>(null)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState('')
+  useEffect(() => { let cancelled = false; getAIProviders().then(async (items) => { const enabled = items.filter(item => item.enabled); if (cancelled) return; setProviders(enabled); const modelLists = await Promise.all(enabled.map(item => getAIProviderModels(item.id))); if (cancelled) return; const firstIndex = modelLists.findIndex(list => list.length > 0); if (firstIndex >= 0) { setProviderId(enabled[firstIndex].id); setModels(modelLists[firstIndex]); setModelId(modelLists[firstIndex][0].id) } }).catch(() => { if (!cancelled) setAiError('Could not load AI providers. Check the backend connection and Settings → AI Providers.') }); return () => { cancelled = true } }, [])
+  async function selectProvider(id: string) { setProviderId(id); setModelId(''); setModels([]); setAiResult(null); try { const found = await getAIProviderModels(id); setModels(found); setModelId(found[0]?.id || '') } catch { setAiError('Could not load models for this provider.') } }
+  async function runAiAnalysis() { if (!rawText.trim() || !providerId || !modelId) return; setAiLoading(true); setAiError(''); setAiResult(null); try { setAiResult(await analyzeSecurityLogs(providerId, modelId, fileName || 'pasted-log.txt', rawText)) } catch { setAiError('AI analysis failed. Check provider/model connectivity, backend logs, and the 200,000-character limit.') } finally { setAiLoading(false) } }
   const events = useMemo(() => rawText.split(/\r?\n/).map((line, index) => line.trim() ? parseLine(line, index + 1, index) : null).filter((item): item is LogEvent => item !== null), [rawText])
   const filtered = useMemo(() => events.filter((event) => (severity === 'all' || event.severity === severity) && (!query || event.raw.toLowerCase().includes(query.toLowerCase()))), [events, severity, query])
   const counts = useMemo(() => ({ critical: events.filter(e => e.severity === 'critical').length, high: events.filter(e => e.severity === 'high').length, medium: events.filter(e => e.severity === 'medium').length, low: events.filter(e => e.severity === 'low').length, info: events.filter(e => e.severity === 'info').length }), [events])
@@ -49,6 +60,23 @@ export function LogAnalysisPanel() {
     </div>
     <label className="log-analysis-paste-label">Or paste log content<textarea value={rawText} onChange={event => { setRawText(event.target.value); setFileName('Pasted log text'); setError('') }} rows={7} placeholder={'2026-08-12T10:15:22Z ERROR Failed login for user admin from 203.0.113.10\n2026-08-12T10:16:01Z WARN Rate limit exceeded for client'} /></label>
     {error && <p className="project-form-error" role="alert">{error}</p>}
+    <div className="log-ai-controls">
+      <div><p className="section-kicker">AI-assisted investigation</p><strong>Analyze logs with your configured AI model</strong><p>Log content is sent to the selected provider through your CyberMind backend.</p></div>
+      <div className="log-ai-selects">
+        <label>AI provider<select value={providerId} onChange={event => void selectProvider(event.target.value)}><option value="">Select provider</option>{providers.map(provider => <option key={provider.id} value={provider.id}>{provider.name}</option>)}</select></label>
+        <label>AI model<select value={modelId} onChange={event => { setModelId(event.target.value); setAiResult(null) }} disabled={!providerId}><option value="">Select model</option>{models.map(model => <option key={model.id} value={model.id}>{model.display_name}</option>)}</select></label>
+        <button type="button" className="dialog-submit-button" disabled={!rawText.trim() || !providerId || !modelId || aiLoading} onClick={() => void runAiAnalysis()}>{aiLoading ? 'Analyzing with AI…' : 'Run AI analysis'}</button>
+      </div>
+      {!providers.length && <p className="project-analysis-hint">Configure and enable a provider and model in Settings → AI Providers to use AI analysis.</p>}
+      {aiError && <p className="project-form-error" role="alert">{aiError}</p>}
+    </div>
+    {aiResult && <section className="log-ai-result" aria-live="polite">
+      <div className="project-analysis-heading"><div><p className="section-kicker">AI analysis result</p><h3>Investigation summary</h3><p>{aiResult.lines_analyzed} lines analyzed · {aiResult.findings.length} findings</p></div><span className="project-analysis-step">AI / REPORT</span></div>
+      <p>{aiResult.summary || 'The model returned no summary.'}</p>
+      {!aiResult.findings.length ? <p className="project-analysis-hint">No specific security findings were returned. This does not guarantee the logs are benign.</p> : aiResult.findings.map((finding, index) => <article className="project-security-finding" key={finding.title + index}><div className="project-security-finding-top"><strong>{finding.title}</strong><span>{finding.severity}</span></div><p>{finding.description}</p><div><strong>Evidence</strong><p>{finding.evidence}</p></div><div><strong>Recommendation</strong><p>{finding.recommendation}</p></div></article>)}
+      <ul>{aiResult.limitations.map(item => <li key={item}>{item}</li>)}</ul>
+      <button type="button" className="dialog-submit-button" onClick={() => { const report = ['# CyberMind AI — AI Security Log Analysis', '', `File: ${aiResult.file_name}`, `Lines analyzed: ${aiResult.lines_analyzed}`, '', '## Summary', aiResult.summary, '', '## Findings', ...aiResult.findings.map(f => `### ${f.title} (${f.severity})\n\n${f.description}\n\n**Evidence:** ${f.evidence}\n\n**Recommendation:** ${f.recommendation}`), '', '## Limitations', ...aiResult.limitations.map(item => `- ${item}`)].join('\n'); const url = URL.createObjectURL(new Blob([report], {type:'text/markdown;charset=utf-8'})); const a = document.createElement('a'); a.href=url; a.download='cybermind-ai-security-log-analysis.md'; a.click(); URL.revokeObjectURL(url) }}>Download AI analysis report</button>
+    </section>}
     <div className="log-analysis-summary" aria-label="Severity counts">
       {(['critical','high','medium','low','info'] as const).map(level => <button type="button" key={level} className={`log-severity-card log-severity-${level}`} onClick={() => setSeverity(severity === level ? 'all' : level)} aria-pressed={severity === level}><span>{level}</span><strong>{counts[level]}</strong></button>)}
     </div>
