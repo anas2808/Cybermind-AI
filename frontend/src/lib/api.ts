@@ -99,6 +99,14 @@ export type AIProviderCreate = {
   credentials?: Record<string, string>
 }
 
+export type AIProviderUpdate = {
+  name?: string
+  endpoint?: string
+  auth_type?: string
+  credentials?: Record<string, string>
+  enabled?: boolean
+}
+
 async function parseResponse<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>
 }
@@ -111,6 +119,15 @@ export async function getAIProviders(): Promise<AIProvider[]> {
 export async function createAIProvider(payload: AIProviderCreate): Promise<AIProvider> {
   const response = await authenticatedFetch('/api/ai/providers/', {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  return parseResponse<AIProvider>(response)
+}
+
+export async function updateAIProvider(providerId: string, payload: AIProviderUpdate): Promise<AIProvider> {
+  const response = await authenticatedFetch(`/api/ai/providers/${encodeURIComponent(providerId)}`, {
+    method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   })
