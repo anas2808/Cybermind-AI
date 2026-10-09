@@ -85,13 +85,14 @@ function ProviderBrandIcon({ provider, fallback, size = 27 }: { provider: AIProv
   const brand = getProviderBrand(provider)
   const [sourceIndex, setSourceIndex] = useState(0)
 
-  if (!brand || sourceIndex > 1) return <Icon name={fallback} size={size} />
+  if (!brand || sourceIndex > 2) return <Icon name={fallback} size={size} />
 
-  // Use two independent CDNs so a blocked or unavailable primary host does not
-  // immediately replace a known provider logo with the generic fallback.
+  // Try independent hosts and an explicit icon color. Some browser/network
+  // configurations block one CDN; provider identity remains dynamically mapped.
   const sources = [
-    `https://cdn.simpleicons.org/${brand.slug}`,
+    `https://cdn.simpleicons.org/${brand.slug}/111820`,
     `https://cdn.jsdelivr.net/npm/simple-icons@v14/icons/${brand.slug}.svg`,
+    `https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/${brand.slug}.svg`,
   ]
 
   return <img
