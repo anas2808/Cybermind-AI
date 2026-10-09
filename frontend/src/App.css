@@ -531,3 +531,12 @@ button { font: inherit; cursor: pointer; }
 .log-severity-pill.log-severity-medium { background: #fff2d8; color: #805711; }
 .log-severity-pill.log-severity-low { background: #e8f1fb; color: #315e8b; }
 @media (max-width: 700px) { .log-analysis-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } .log-analysis-toolbar { grid-template-columns: 1fr; } .log-analysis-file-label { flex-wrap: wrap; max-width: 100%; } }
+
+.log-ai-controls, .log-ai-result { display: grid; gap: 14px; padding: 16px; border: 1px solid var(--cm-border); border-radius: 12px; background: var(--cm-surface-soft); }
+.log-ai-controls > div:first-child p:last-child { margin: 5px 0 0; color: var(--cm-muted); font-size: 12px; }
+.log-ai-selects { display: grid; grid-template-columns: minmax(140px, 1fr) minmax(140px, 1fr) auto; align-items: end; gap: 12px; }
+.log-ai-selects label { display: grid; gap: 7px; font-size: 13px; font-weight: 600; }
+.log-ai-selects select { width: 100%; min-width: 0; border: 1px solid var(--cm-border); border-radius: 8px; padding: 10px 12px; background: white; font: inherit; font-weight: 400; }
+.log-ai-result > p { line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
+.log-ai-result ul { color: var(--cm-muted); font-size: 12px; line-height: 1.6; }
+@media (max-width: 700px) { .log-ai-selects { grid-template-columns: 1fr; } }
