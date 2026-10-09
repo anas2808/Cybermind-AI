@@ -61,8 +61,24 @@ const PROVIDER_BRANDS: Array<{ label: string; slug: string; matches: RegExp }> =
 ]
 
 function getProviderBrand(provider: AIProvider): ProviderBrand | null {
-  const identity = `${provider.name} ${provider.endpoint}`.toLowerCase()
-  return PROVIDER_BRANDS.find((brand) => brand.matches.test(identity)) || null
+  // Prefer the user-entered provider name first. Generic compatibility paths
+  // such as "/openai/v1" do not mean the service is actually OpenAI.
+  const name = provider.name.toLowerCase()
+  const nameMatch = PROVIDER_BRANDS.find((brand) => brand.matches.test(name))
+  if (nameMatch) return nameMatch
+
+  // Inspect the hostname separately before the full URL. For example,
+  // api.groq.com/openai/v1 is Groq even though its path contains "openai".
+  try {
+    const hostname = new URL(provider.endpoint).hostname.toLowerCase()
+    const hostMatch = PROVIDER_BRANDS.find((brand) => brand.matches.test(hostname))
+    if (hostMatch) return hostMatch
+  } catch {
+    // A malformed or relative endpoint can still be matched below.
+  }
+
+  const endpoint = provider.endpoint.toLowerCase()
+  return PROVIDER_BRANDS.find((brand) => brand.matches.test(endpoint)) || null
 }
 
 function ProviderBrandIcon({ provider, fallback, size = 27 }: { provider: AIProvider; fallback: IconName; size?: number }) {
