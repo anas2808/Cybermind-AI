@@ -16,50 +16,6 @@ type AIProvidersPageProps = {
   onProvidersChanged?: () => void
 }
 
-function providerMeta(provider: AIProvider) {
-  const name = provider.name.toLowerCase()
-  if (provider.provider_type === 'ollama' || name.includes('ollama')) {
-    return { label: 'LOCAL', icon: 'llama', category: 'Local models', description: 'Run open-source models locally on your machine or server.' }
-  }
-  if (name.includes('phone') || name.includes('mobile')) {
-    return { label: 'LOCAL NETWORK', icon: 'phone', category: 'Local network', description: 'AI service available on your local network.' }
-  }
-  if (name.includes('openai') && !name.includes('compatible')) {
-    return { label: 'CLOUD', icon: 'openai', category: 'Cloud API', description: 'Connect to an OpenAI API endpoint.' }
-  }
-  if (name.includes('anthropic') || name.includes('claude')) {
-    return { label: 'CLOUD', icon: 'anthropic', category: 'Cloud API', description: 'Connect to an Anthropic-compatible endpoint.' }
-  }
-  if (provider.provider_type === 'openai_compatible') {
-    return { label: 'API', icon: 'compatible', category: 'OpenAI-compatible endpoint', description: 'Connect to a cloud, LAN, or self-hosted compatible API.' }
-  }
-  return { label: 'CUSTOM', icon: 'custom', category: 'Custom endpoint', description: 'Connect to a custom AI service endpoint.' }
-}
-
-function ProviderLogo({ kind }: { kind: string }) {
-  if (kind === 'anthropic') {
-    return <span className="ai-provider-logo ai-provider-logo-anthropic" aria-hidden="true">A</span>
-  }
-  return (
-    <span className={`ai-provider-logo ai-provider-logo-${kind}`} aria-hidden="true">
-      {kind === 'phone' ? '▯' : kind === 'openai' ? '◎' : kind === 'llama' ? '◉' : kind === 'compatible' ? '⬡' : kind === 'custom' ? '↗' : 'AI'}
-    </span>
-  )
-}
-
-function timeSince(value: string | null) {
-  if (!value) return '—'
-  const timestamp = new Date(value).getTime()
-  if (!Number.isFinite(timestamp)) return '—'
-  const minutes = Math.max(0, Math.floor((Date.now() - timestamp) / 60000))
-  if (minutes < 1) return 'Just now'
-  if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`
-  const days = Math.floor(hours / 24)
-  return `${days} day${days === 1 ? '' : 's'} ago`
-}
-
 export function AIProvidersPage({ onProvidersChanged }: AIProvidersPageProps) {
   const [providers, setProviders] = useState<AIProvider[]>([])
   const [models, setModels] = useState<Record<string, AIModel[]>>({})
@@ -70,8 +26,8 @@ export function AIProvidersPage({ onProvidersChanged }: AIProvidersPageProps) {
   const [discoveringId, setDiscoveringId] = useState('')
   const [deletingId, setDeletingId] = useState('')
 
-  async function loadProviders(showInitialLoading = true) {
-    if (showInitialLoading) setIsLoading(true)
+  async function loadProviders() {
+    setIsLoading(true)
     setError('')
     try {
       const nextProviders = await getAIProviders()
@@ -85,7 +41,7 @@ export function AIProvidersPage({ onProvidersChanged }: AIProvidersPageProps) {
         ? 'Your session has expired. Please sign in again.'
         : 'We could not load your AI providers. Try again.')
     } finally {
-      if (showInitialLoading) setIsLoading(false)
+      setIsLoading(false)
     }
   }
 
@@ -98,11 +54,11 @@ export function AIProvidersPage({ onProvidersChanged }: AIProvidersPageProps) {
     setError('')
     try {
       await testAIProvider(providerId)
-      await loadProviders(false)
+      await loadProviders()
       onProvidersChanged?.()
     } catch {
       setError('Connection test failed. Check the endpoint and credentials.')
-      await loadProviders(false)
+      await loadProviders()
     } finally {
       setTestingId('')
     }
@@ -172,89 +128,61 @@ export function AIProvidersPage({ onProvidersChanged }: AIProvidersPageProps) {
           <div className="projects-empty-icon" aria-hidden="true">+</div>
           <div>
             <strong>No AI providers configured</strong>
-            <p>Add an Ollama, cloud, LAN, or custom AI endpoint to make a model available for project analysis.</p>
+            <p>Add an Ollama, cloud, LAN, phone, or custom AI endpoint to make a model available for project analysis.</p>
           </div>
         </div>
       ) : (
         <div className="ai-provider-list">
-          {providers.map((provider) => {
-            const meta = providerMeta(provider)
-            const providerModels = models[provider.id] || []
-            return (
-              <article className="ai-provider-card" key={provider.id}>
-                <div className="ai-provider-card-head">
-                  <div className="ai-provider-identity">
-                    <ProviderLogo kind={meta.icon} />
-                    <div className="ai-provider-heading">
-                      <div className="ai-provider-title-row">
-                        <h3>{provider.name}</h3>
-                        <span className={`ai-provider-kind ${meta.icon === 'phone' ? 'kind-green' : meta.icon === 'anthropic' ? 'kind-orange' : 'kind-blue'}`}>
-                          {meta.category}
-                        </span>
-                      </div>
-                      <span className={provider.connection_status === 'connected' ? 'ai-provider-status ai-provider-status-ok' : 'ai-provider-status'}>
-                        <i aria-hidden="true" />
-                        {provider.connection_status === 'connected' ? 'Connected' : provider.connection_status || 'Not tested'}
-                      </span>
-                    </div>
-                  </div>
+          {providers.map((provider) => (
+            <article className="ai-provider-card" key={provider.id}>
+              <div className="ai-provider-card-head">
+                <div>
+                  <p className="ai-provider-type">{provider.provider_type}</p>
+                  <h3>{provider.name}</h3>
+                  <p className="ai-provider-endpoint">{provider.endpoint}</p>
                 </div>
-                <p className="ai-provider-description">{meta.description}</p>
-                <div className="ai-provider-details">
-                  <div className="ai-provider-detail-row">
-                    <span className="detail-icon" aria-hidden="true">⚙</span><span>Endpoint</span><strong title={provider.endpoint}>{provider.endpoint}</strong>
-                  </div>
-                  <div className="ai-provider-detail-row">
-                    <span className="detail-icon" aria-hidden="true">⬡</span><span>Models</span><strong>{providerModels.length} {providerModels.length === 1 ? 'model' : 'models'}</strong>
-                  </div>
-                  <div className="ai-provider-detail-row">
-                    <span className="detail-icon" aria-hidden="true">◷</span><span>Last tested</span><strong>{timeSince(provider.last_tested_at)}</strong>
-                  </div>
-                </div>
-                <div className="ai-provider-actions">
-                  <button type="button" onClick={() => void handleTest(provider.id)} disabled={testingId === provider.id}>
-                    {testingId === provider.id ? 'Testing...' : 'Test'}
-                  </button>
-                  <button type="button" onClick={() => void handleDiscover(provider.id)} disabled={discoveringId === provider.id}>
-                    {discoveringId === provider.id ? 'Discovering...' : 'Discover models'}
-                  </button>
-                  <button type="button" className="ai-provider-remove" onClick={() => void handleDelete(provider.id)} disabled={deletingId === provider.id}>
-                    {deletingId === provider.id ? 'Removing...' : 'Remove'}
-                  </button>
-                </div>
-              </article>
-            )
-          })}
-        </div>
-      )}
+                <span className={provider.connection_status === 'connected' ? 'ai-provider-status ai-provider-status-ok' : 'ai-provider-status'}>
+                  <i aria-hidden="true" />
+                  {provider.connection_status}
+                </span>
+              </div>
 
-      {!isLoading && (
-        <section className="ai-provider-add-panel" aria-labelledby="ai-provider-add-heading">
-          <div className="ai-provider-add-copy">
-            <div className="ai-provider-add-icon" aria-hidden="true">⚙</div>
-            <div>
-              <h3 id="ai-provider-add-heading">Add New AI Provider</h3>
-              <p>Connect to any AI provider - local, cloud, or custom endpoint.</p>
-            </div>
-          </div>
-          <div className="ai-provider-add-options">
-            <button type="button" className="tile-blue" onClick={() => setShowAdd(true)}>
-              <span className="ai-provider-option-icon">◉</span><span><strong>Ollama</strong><small>Local models</small></span>
-            </button>
-            <button type="button" className="tile-green" onClick={() => setShowAdd(true)}>
-              <span className="ai-provider-option-icon">⬡</span><span><strong>OpenAI Compatible</strong><small>(Any API endpoint)</small></span>
-            </button>
-            <button type="button" className="tile-blue" onClick={() => setShowAdd(true)}>
-              <span className="ai-provider-option-icon">◎</span><span><strong>OpenAI</strong><small>(Official API)</small></span>
-            </button>
-            <button type="button" className="tile-orange" onClick={() => setShowAdd(true)}>
-              <span className="ai-provider-option-icon">A</span><span><strong>Anthropic</strong><small>Claude models</small></span>
-            </button>
-            <button type="button" className="tile-neutral" onClick={() => setShowAdd(true)}>
-              <span className="ai-provider-option-icon">↗</span><span><strong>Custom Endpoint</strong><small>HTTP endpoint</small></span>
-            </button>
-          </div>
-        </section>
+              <div className="ai-provider-actions">
+                <button type="button" onClick={() => void handleTest(provider.id)} disabled={testingId === provider.id}>
+                  {testingId === provider.id ? 'Testing...' : 'Test connection'}
+                </button>
+                <button type="button" onClick={() => void handleDiscover(provider.id)} disabled={discoveringId === provider.id}>
+                  {discoveringId === provider.id ? 'Discovering...' : 'Discover models'}
+                </button>
+                <button type="button" className="ai-provider-remove" onClick={() => void handleDelete(provider.id)} disabled={deletingId === provider.id}>
+                  {deletingId === provider.id ? 'Removing...' : 'Remove'}
+                </button>
+              </div>
+
+              <div className="ai-provider-models">
+                <div className="ai-provider-models-head">
+                  <strong>Available models</strong>
+                  <span>{(models[provider.id] || []).length}</span>
+                </div>
+                {(models[provider.id] || []).length > 0 ? (
+                  <ul>
+                    {(models[provider.id] || []).map((model) => (
+                      <li key={model.id}>
+                        <span>
+                          <strong>{model.display_name}</strong>
+                          <small>{model.model_id}</small>
+                        </span>
+                        <em>{model.availability}</em>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>No models discovered yet. Use “Discover models” to query this provider.</p>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
       )}
 
       {showAdd && (
@@ -262,7 +190,7 @@ export function AIProvidersPage({ onProvidersChanged }: AIProvidersPageProps) {
           onClose={() => setShowAdd(false)}
           onCreated={async () => {
             setShowAdd(false)
-            await loadProviders(false)
+            await loadProviders()
             onProvidersChanged?.()
           }}
         />
@@ -319,25 +247,20 @@ function AddProviderDialog({ onClose, onCreated }: { onClose: () => void; onCrea
       <section className="project-dialog ai-provider-dialog" role="dialog" aria-modal="true" aria-labelledby="add-ai-provider-title">
         <div className="project-dialog-heading">
           <div>
-            <p className="section-kicker">AI configuration</p>
-            <h3 id="add-ai-provider-title">Connect an AI provider</h3>
-            <p className="ai-provider-dialog-subtitle">Add a local, cloud, LAN, or compatible AI endpoint to CyberMind.</p>
+            <p className="section-kicker">Provider setup</p>
+            <h3 id="add-ai-provider-title">Add AI Provider</h3>
           </div>
           <button type="button" className="dialog-close-button" aria-label="Close dialog" onClick={onClose} disabled={isSaving}>×</button>
         </div>
         <form onSubmit={handleSubmit}>
           <label htmlFor="ai-provider-name">Name</label>
           <input id="ai-provider-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="My Ollama" autoFocus />
-          <div className="ai-provider-dialog-label">Connection type</div>
-          <div className="ai-provider-type-options" role="radiogroup" aria-label="AI provider connection type">
-            <button type="button" className={providerType === 'ollama' ? 'ai-provider-type-option ai-provider-type-option-active' : 'ai-provider-type-option'} onClick={() => setProviderType('ollama')}>
-              <span className="ai-provider-option-icon">O</span><span><strong>Ollama</strong><small>Local runtime</small></span>
-            </button>
-            <button type="button" className={providerType === 'openai_compatible' ? 'ai-provider-type-option ai-provider-type-option-active' : 'ai-provider-type-option'} onClick={() => setProviderType('openai_compatible')}>
-              <span className="ai-provider-option-icon">A</span><span><strong>OpenAI-compatible</strong><small>Cloud or LAN API</small></span>
-            </button>
-          </div>
-          <p className="field-message">Select the API protocol exposed by your service. The provider name is only a label; CyberMind stays vendor-neutral.</p>
+          <label htmlFor="ai-provider-type">API protocol</label>
+          <select id="ai-provider-type" value={providerType} onChange={(event) => setProviderType(event.target.value)}>
+            <option value="openai_compatible">OpenAI-compatible API</option>
+            <option value="ollama">Ollama API</option>
+          </select>
+          <p className="field-message">Choose the API protocol exposed by the service. The provider name is only a label; CyberMind does not lock you to a vendor.</p>
           <label htmlFor="ai-provider-endpoint">Endpoint</label>
           <input id="ai-provider-endpoint" type="url" value={endpoint} onChange={(event) => setEndpoint(event.target.value)} placeholder={providerType === 'ollama' ? 'http://localhost:11434' : 'https://api.example.com/v1'} />
           <label htmlFor="ai-provider-key">API key <span className="ai-provider-optional">(optional)</span></label>
