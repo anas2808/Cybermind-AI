@@ -427,6 +427,9 @@ button { font: inherit; cursor: pointer; }
 .ai-reference-logo { display: grid; flex: 0 0 43px; place-items: center; width: 43px; height: 43px; border-radius: 9px; color: var(--cm-primary); background: #eaf5f9; }
 .ai-reference-logo.blue { color: var(--cm-primary); background: #eaf5f9; }
 .ai-reference-logo.neutral { color: var(--cm-text); background: #f1f4f5; }
+.ai-reference-brand-image { display: block; width: 27px; height: 27px; object-fit: contain; }
+.ai-reference-logo .ai-reference-brand-image { max-width: 100%; max-height: 100%; }
+.ai-reference-logo.blue .ai-reference-brand-image, .ai-reference-logo.neutral .ai-reference-brand-image { color: inherit; }
 .ai-reference-name { display: flex; align-items: center; gap: 7px; color: var(--cm-text-strong); font-size: .82rem; font-weight: 700; }
 .ai-reference-tag { padding: 3px 7px; border: 1px solid #c9dbff; border-radius: 5px; color: var(--cm-primary); background: #e8f0ff; font-size: .55rem; font-weight: 600; white-space: nowrap; }
 .ai-reference-tag.neutral { border-color: var(--cm-border); color: var(--cm-muted); background: #f7f9fa; }
