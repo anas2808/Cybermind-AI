@@ -19,20 +19,50 @@ export class ApiError extends Error {
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').replace(/\/$/, '')
 
-async function authenticatedFetch(path: string, init: RequestInit = {}) {
-  const { data, error } = await supabase.auth.getSession()
-
-  if (error || !data.session?.access_token) {
-    throw new ApiError(401)
+async function getValidAccessToken(forceRefresh = false): Promise<string> {
+  // Try refreshing first when recovering from an expired access token. Supabase
+  // will use the stored refresh token and persist the renewed session.
+  if (forceRefresh) {
+    const refreshed = await supabase.auth.refreshSession()
+    if (!refreshed.error && refreshed.data.session?.access_token) {
+      return refreshed.data.session.access_token
+    }
   }
 
-  const response = await fetch(`${apiBaseUrl}${path}`, {
+  const { data, error } = await supabase.auth.getSession()
+  if (!error && data.session?.access_token) {
+    return data.session.access_token
+  }
+
+  // A session can exist but be expired/stale in storage. Give Supabase one
+  // explicit refresh attempt before asking the user to sign in again.
+  const refreshed = await supabase.auth.refreshSession()
+  if (!refreshed.error && refreshed.data.session?.access_token) {
+    return refreshed.data.session.access_token
+  }
+
+  throw new ApiError(401)
+}
+
+async function authenticatedFetch(path: string, init: RequestInit = {}) {
+  let accessToken = await getValidAccessToken()
+
+  const sendRequest = (token: string) => fetch(`${apiBaseUrl}${path}`, {
     ...init,
     headers: {
       ...init.headers,
-      Authorization: `Bearer ${data.session.access_token}`,
+      Authorization: `Bearer ${token}`,
     },
   })
+
+  let response = await sendRequest(accessToken)
+
+  // If the API rejects an access token that looked valid locally, refresh once
+  // and retry the same request. Never loop indefinitely on authentication errors.
+  if (response.status === 401) {
+    accessToken = await getValidAccessToken(true)
+    response = await sendRequest(accessToken)
+  }
 
   if (!response.ok) {
     throw new ApiError(response.status)
@@ -40,7 +70,6 @@ async function authenticatedFetch(path: string, init: RequestInit = {}) {
 
   return response
 }
-
 export async function getProjects(): Promise<Project[]> {
   const response = await authenticatedFetch('/api/projects/')
   return response.json() as Promise<Project[]>
