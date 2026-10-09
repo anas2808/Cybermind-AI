@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { LogAnalysisPanel } from './LogAnalysisPanel'
 import {
   ApiError,
   analyzeFeatureSecurity,
@@ -21,6 +22,7 @@ type ProjectWorkspaceProps = {
 
 export function ProjectWorkspace({ projectId, onBack, onProjectLoaded }: ProjectWorkspaceProps) {
   const [project, setProject] = useState<Project | null>(null)
+  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'Project Analysis' | 'Log Analysis'>('Project Analysis')
   const [status, setStatus] = useState<'loading' | 'success' | 'not-found' | 'unauthorized' | 'error'>('loading')
   const [retryCount, setRetryCount] = useState(0)
   const [providers, setProviders] = useState<AIProvider[]>([])
@@ -154,15 +156,17 @@ export function ProjectWorkspace({ projectId, onBack, onProjectLoaded }: Project
               <button
                 type="button"
                 key={label}
-                className={label === 'Project Analysis' ? 'project-workspace-nav-item project-workspace-nav-item-active' : 'project-workspace-nav-item'}
-                disabled={label !== 'Project Analysis'}
-                aria-current={label === 'Project Analysis' ? 'page' : undefined}
+                className={label === activeWorkspaceTab ? 'project-workspace-nav-item project-workspace-nav-item-active' : 'project-workspace-nav-item'}
+                disabled={label !== 'Project Analysis' && label !== 'Log Analysis'}
+                onClick={() => { if (label === 'Project Analysis' || label === 'Log Analysis') setActiveWorkspaceTab(label) }}
+                aria-current={label === activeWorkspaceTab ? 'page' : undefined}
               >
                 {label}
               </button>
             ))}
           </nav>
 
+          {activeWorkspaceTab === 'Log Analysis' ? <LogAnalysisPanel /> : <>
           <section className="project-analysis-control project-detail-surface" aria-labelledby="project-analysis-title">
             <div className="project-analysis-heading">
               <div>
@@ -230,6 +234,7 @@ export function ProjectWorkspace({ projectId, onBack, onProjectLoaded }: Project
             </>
           )}
           {featureAnalysis && <FeatureSecurityResult analysis={featureAnalysis} />}
+          </>}
         </div>
       )}
 
