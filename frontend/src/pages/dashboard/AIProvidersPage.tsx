@@ -43,21 +43,21 @@ function providerMeta(provider: AIProvider) {
 type ProviderBrand = { label: string; slug: string }
 
 const PROVIDER_BRANDS: Array<{ label: string; slug: string; matches: RegExp }> = [
-  { label: 'Ollama', slug: 'ollama', matches: /\\bollama\\b/ },
-  { label: 'OpenAI', slug: 'openai', matches: /\\b(openai|gpt-4|gpt-3|chatgpt)\\b/ },
-  { label: 'Anthropic', slug: 'anthropic', matches: /\\b(anthropic|claude)\\b/ },
-  { label: 'Google Gemini', slug: 'googlegemini', matches: /\\b(gemini|google ai|google generative)\\b/ },
-  { label: 'Meta', slug: 'meta', matches: /\\b(meta|llama)\\b/ },
-  { label: 'Mistral AI', slug: 'mistralai', matches: /\\b(mistral|mixtral|codestral)\\b/ },
-  { label: 'DeepSeek', slug: 'deepseek', matches: /\\bdeepseek\\b/ },
-  { label: 'Cohere', slug: 'cohere', matches: /\\bcohere\\b/ },
-  { label: 'Hugging Face', slug: 'huggingface', matches: /\\b(hugging ?face|hf inference)\\b/ },
-  { label: 'Groq', slug: 'groq', matches: /\\bgroq\\b/ },
-  { label: 'Perplexity', slug: 'perplexity', matches: /\\bperplexity\\b/ },
-  { label: 'xAI', slug: 'x', matches: /\\b(xai|grok)\\b/ },
-  { label: 'Qwen', slug: 'qwen', matches: /\\b(qwen|alibaba cloud)\\b/ },
-  { label: 'Microsoft Azure', slug: 'microsoftazure', matches: /\\b(azure openai|microsoft azure)\\b/ },
-  { label: 'Amazon Bedrock', slug: 'amazonaws', matches: /\\b(amazon bedrock|aws bedrock)\\b/ },
+  { label: 'Ollama', slug: 'ollama', matches: /\bollama\b/ },
+  { label: 'OpenAI', slug: 'openai', matches: /\b(openai|gpt-4|gpt-3|chatgpt)\b/ },
+  { label: 'Anthropic', slug: 'anthropic', matches: /\b(anthropic|claude)\b/ },
+  { label: 'Google Gemini', slug: 'googlegemini', matches: /\b(gemini|google ai|google generative)\b/ },
+  { label: 'Meta', slug: 'meta', matches: /\b(meta|llama)\b/ },
+  { label: 'Mistral AI', slug: 'mistralai', matches: /\b(mistral|mixtral|codestral)\b/ },
+  { label: 'DeepSeek', slug: 'deepseek', matches: /\bdeepseek\b/ },
+  { label: 'Cohere', slug: 'cohere', matches: /\bcohere\b/ },
+  { label: 'Hugging Face', slug: 'huggingface', matches: /\b(hugging ?face|hf inference)\b/ },
+  { label: 'Groq', slug: 'groq', matches: /\bgroq\b/ },
+  { label: 'Perplexity', slug: 'perplexity', matches: /\bperplexity\b/ },
+  { label: 'xAI', slug: 'x', matches: /\b(xai|grok)\b/ },
+  { label: 'Qwen', slug: 'qwen', matches: /\b(qwen|alibaba cloud)\b/ },
+  { label: 'Microsoft Azure', slug: 'microsoftazure', matches: /\b(azure openai|microsoft azure)\b/ },
+  { label: 'Amazon Bedrock', slug: 'amazonaws', matches: /\b(amazon bedrock|aws bedrock)\b/ },
 ]
 
 function getProviderBrand(provider: AIProvider): ProviderBrand | null {
