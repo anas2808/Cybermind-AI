@@ -32,8 +32,8 @@ export function AIProvidersPage({ onProvidersChanged }: AIProvidersPageProps) {
   const [discoveringId, setDiscoveringId] = useState('')
   const [deletingId, setDeletingId] = useState('')
 
-  async function loadProviders() {
-    setIsLoading(true)
+  async function loadProviders(showInitialLoading = true) {
+    if (showInitialLoading) setIsLoading(true)
     setError('')
     try {
       const nextProviders = await getAIProviders()
@@ -47,7 +47,7 @@ export function AIProvidersPage({ onProvidersChanged }: AIProvidersPageProps) {
         ? 'Your session has expired. Please sign in again.'
         : 'We could not load your AI providers. Try again.')
     } finally {
-      setIsLoading(false)
+      if (showInitialLoading) setIsLoading(false)
     }
   }
 
@@ -60,11 +60,11 @@ export function AIProvidersPage({ onProvidersChanged }: AIProvidersPageProps) {
     setError('')
     try {
       await testAIProvider(providerId)
-      await loadProviders()
+      await loadProviders(false)
       onProvidersChanged?.()
     } catch {
       setError('Connection test failed. Check the endpoint and credentials.')
-      await loadProviders()
+      await loadProviders(false)
     } finally {
       setTestingId('')
     }
@@ -238,7 +238,7 @@ export function AIProvidersPage({ onProvidersChanged }: AIProvidersPageProps) {
           onClose={() => setShowAdd(false)}
           onCreated={async () => {
             setShowAdd(false)
-            await loadProviders()
+            await loadProviders(false)
             onProvidersChanged?.()
           }}
         />
