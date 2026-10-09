@@ -40,92 +40,68 @@ function providerMeta(provider: AIProvider) {
   return { label: provider.provider_type, tone: 'neutral', icon: 'cube' as IconName, description: 'Configured AI endpoint.' }
 }
 
-type ProviderBrand = { label: string; slug: string }
+type ProviderBrand = { label: string; domain: string; matches: RegExp }
 
-const PROVIDER_BRANDS: Array<{ label: string; slug: string; matches: RegExp }> = [
-  { label: 'Ollama', slug: 'ollama', matches: /\bollama\b/ },
-  { label: 'OpenAI', slug: 'openai', matches: /\b(openai|gpt-4|gpt-3|chatgpt)\b/ },
-  { label: 'Anthropic', slug: 'anthropic', matches: /\b(anthropic|claude)\b/ },
-  { label: 'Google Gemini', slug: 'googlegemini', matches: /\b(gemini|google ai|google generative)\b/ },
-  { label: 'Meta', slug: 'meta', matches: /\b(meta|llama)\b/ },
-  { label: 'Mistral AI', slug: 'mistralai', matches: /\b(mistral|mixtral|codestral)\b/ },
-  { label: 'DeepSeek', slug: 'deepseek', matches: /\bdeepseek\b/ },
-  { label: 'Cohere', slug: 'cohere', matches: /\bcohere\b/ },
-  { label: 'Hugging Face', slug: 'huggingface', matches: /\b(hugging ?face|hf inference)\b/ },
-  { label: 'Groq', slug: 'groq', matches: /\bgroq\b/ },
-  { label: 'Perplexity', slug: 'perplexity', matches: /\bperplexity\b/ },
-  { label: 'xAI', slug: 'x', matches: /\b(xai|grok)\b/ },
-  { label: 'Qwen', slug: 'qwen', matches: /\b(qwen|alibaba cloud)\b/ },
-  { label: 'Microsoft Azure', slug: 'microsoftazure', matches: /\b(azure openai|microsoft azure)\b/ },
-  { label: 'Amazon Bedrock', slug: 'amazonaws', matches: /\b(amazon bedrock|aws bedrock)\b/ },
+const PROVIDER_BRANDS: ProviderBrand[] = [
+  { label: 'Ollama', domain: 'ollama.com', matches: /\\bollama\\b/ },
+  { label: 'OpenAI', domain: 'openai.com', matches: /\\b(openai|gpt-4|gpt-3|chatgpt)\\b/ },
+  { label: 'Anthropic', domain: 'anthropic.com', matches: /\\b(anthropic|claude)\\b/ },
+  { label: 'Google Gemini', domain: 'gemini.google.com', matches: /\\b(gemini|google ai|google generative)\\b/ },
+  { label: 'Meta', domain: 'meta.com', matches: /\\b(meta|llama)\\b/ },
+  { label: 'Mistral AI', domain: 'mistral.ai', matches: /\\b(mistral|mixtral|codestral)\\b/ },
+  { label: 'DeepSeek', domain: 'deepseek.com', matches: /\\bdeepseek\\b/ },
+  { label: 'Cohere', domain: 'cohere.com', matches: /\\bcohere\\b/ },
+  { label: 'Hugging Face', domain: 'huggingface.co', matches: /\\b(hugging ?face|hf inference)\\b/ },
+  { label: 'Groq', domain: 'groq.com', matches: /\\bgroq\\b/ },
+  { label: 'Perplexity', domain: 'perplexity.ai', matches: /\\bperplexity\\b/ },
+  { label: 'xAI', domain: 'x.ai', matches: /\\b(xai|grok)\\b/ },
+  { label: 'Qwen', domain: 'qwen.ai', matches: /\\b(qwen|alibaba cloud)\\b/ },
+  { label: 'Microsoft Azure', domain: 'azure.microsoft.com', matches: /\\b(azure openai|microsoft azure)\\b/ },
+  { label: 'Amazon Bedrock', domain: 'aws.amazon.com', matches: /\\b(amazon bedrock|aws bedrock)\\b/ },
 ]
 
 function getProviderBrand(provider: AIProvider): ProviderBrand | null {
-  // Prefer the user-entered provider name first. Generic compatibility paths
-  // such as "/openai/v1" do not mean the service is actually OpenAI.
-  const name = provider.name.toLowerCase()
-  const nameMatch = PROVIDER_BRANDS.find((brand) => brand.matches.test(name))
+  // Provider names take precedence over compatible API paths, e.g. Groq's /openai/v1.
+  const nameMatch = PROVIDER_BRANDS.find((brand) => brand.matches.test(provider.name.toLowerCase()))
   if (nameMatch) return nameMatch
 
-  // Inspect the hostname separately before the full URL. For example,
-  // api.groq.com/openai/v1 is Groq even though its path contains "openai".
   try {
     const hostname = new URL(provider.endpoint).hostname.toLowerCase()
-    const hostMatch = PROVIDER_BRANDS.find((brand) => brand.matches.test(hostname))
+    const hostMatch = PROVIDER_BRANDS.find((brand) =>
+      brand.matches.test(hostname.replace(/[-.]/g, ' ')) ||
+      hostname.includes(brand.domain)
+    )
     if (hostMatch) return hostMatch
   } catch {
-    // A malformed or relative endpoint can still be matched below.
+    // Fall through to a provider-name initial if the endpoint is malformed.
   }
 
-  const endpoint = provider.endpoint.toLowerCase()
-  return PROVIDER_BRANDS.find((brand) => brand.matches.test(endpoint)) || null
+  return null
 }
 
 function ProviderBrandIcon({ provider, fallback, size = 27 }: { provider: AIProvider; fallback: IconName; size?: number }) {
   const brand = getProviderBrand(provider)
+  const token = import.meta.env.VITE_LOGO_DEV_TOKEN
+  const [failed, setFailed] = useState(false)
 
-  // Keep provider identity visible even when external logo hosts are blocked
-  // or a brand is missing from an icon catalog. The local mark has no network
-  // dependency, so the card never renders an empty image box.
-  if (!brand) return <Icon name={fallback} size={size} />
-
-  if (brand.slug === 'groq') {
-    return <svg
-      className="ai-reference-icon ai-reference-local-brand"
-      width={size}
-      height={size}
-      viewBox="0 0 32 32"
-      role="img"
-      aria-label="Groq logo"
-      title="Groq"
-    >
-      <rect x="2" y="2" width="28" height="28" rx="7" fill="#111820" />
-      <path d="M21.8 10.5a8 8 0 1 0 1.1 9.2h-7v-4h11v2a11 11 0 1 1-3-9.1z" fill="#fff" />
-    </svg>
+  if (!brand || !token || failed) {
+    if (brand) {
+      return <span className="ai-reference-local-brand" role="img" aria-label={`${brand.label} logo fallback`} title={brand.label} style={{ width: size, height: size, display: 'grid', placeItems: 'center', fontSize: Math.round(size * 0.52), fontWeight: 800, lineHeight: 1, color: '#111820' }}>{brand.label === 'Google Gemini' ? '✦' : brand.label.slice(0, 1).toUpperCase()}</span>
+    }
+    return <Icon name={fallback} size={size} />
   }
 
-  const [sourceIndex, setSourceIndex] = useState(0)
-  if (sourceIndex > 2) {
-    return <span className="ai-reference-local-brand" role="img" aria-label={`${brand.label} logo`} title={brand.label} style={{ width: size, height: size, display: 'grid', placeItems: 'center', fontSize: Math.round(size * 0.52), fontWeight: 800, lineHeight: 1, color: '#111820' }}>{brand.label === 'Google Gemini' ? '✦' : brand.label.slice(0, 1).toUpperCase()}</span>
-  }
-
-  const sources = [
-    `https://cdn.simpleicons.org/${brand.slug}/111820`,
-    `https://cdn.jsdelivr.net/npm/simple-icons@v14/icons/${brand.slug}.svg`,
-    `https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/${brand.slug}.svg`,
-  ]
+  const logoUrl = `https://img.logo.dev/${brand.domain}?token=${encodeURIComponent(token)}&size=${size * 2}&format=png&fallback=404`
 
   return <img
     className="ai-reference-brand-image"
-    src={sources[sourceIndex]}
-    alt=""
-    aria-label={`${brand.label} logo`}
+    src={logoUrl}
+    alt={`${brand.label} logo`}
     title={`${brand.label} logo`}
     width={size}
     height={size}
-    loading="eager"
-    referrerPolicy="no-referrer"
-    onError={() => setSourceIndex((current) => current + 1)}
+    loading="lazy"
+    onError={() => setFailed(true)}
   />
 }
 
