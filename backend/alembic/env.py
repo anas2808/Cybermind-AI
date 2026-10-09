@@ -7,6 +7,7 @@ from alembic import context
 from app.database.connection import Base, engine
 from app.models.user import User
 from app.models.projects import Project
+from app.models.ai_provider import AIModel, AIProvider
 
 config = context.config
 

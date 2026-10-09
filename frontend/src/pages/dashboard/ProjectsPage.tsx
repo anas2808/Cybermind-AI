@@ -13,6 +13,7 @@ export function ProjectsPage({ projects, apiStatus, onRetry, onProjectCreated, o
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [repositoryUrl, setRepositoryUrl] = useState('')
   const [formError, setFormError] = useState('')
   const [isCreating, setIsCreating] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
@@ -37,10 +38,11 @@ export function ProjectsPage({ projects, apiStatus, onRetry, onProjectCreated, o
     setFormError('')
     setIsCreating(true)
     try {
-      await createProject(trimmedName, description.trim())
+      await createProject(trimmedName, description.trim(), repositoryUrl.trim())
       onProjectCreated()
       setName('')
       setDescription('')
+      setRepositoryUrl('')
       setIsCreateOpen(false)
       setSuccessMessage('Project created. Your project has been added to the workspace.')
     } catch (error: unknown) {
@@ -136,6 +138,9 @@ export function ProjectsPage({ projects, apiStatus, onRetry, onProjectCreated, o
               <input id="project-name" value={name} onChange={(event) => setName(event.target.value)} autoFocus />
               <label htmlFor="project-description">Description</label>
               <textarea id="project-description" value={description} onChange={(event) => setDescription(event.target.value)} rows={4} />
+              <label htmlFor="project-repository-url">Repository URL <span className="ai-provider-optional">(optional)</span></label>
+              <input id="project-repository-url" type="url" value={repositoryUrl} onChange={(event) => setRepositoryUrl(event.target.value)} placeholder="https://github.com/owner/repository" />
+              <p className="field-message">Public Git repositories are supported in this first analysis version.</p>
               {formError && <p className="project-form-error" role="alert">{formError}</p>}
               <div className="project-dialog-actions">
                 <button type="button" className="dialog-cancel-button" onClick={() => setIsCreateOpen(false)} disabled={isCreating}>Cancel</button>

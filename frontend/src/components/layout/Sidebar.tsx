@@ -41,7 +41,7 @@ const navigationGroups: NavigationGroup[] = [
   },
   { label: 'Intelligence', items: [{ label: 'Project Reviewer', id: 'project-reviewer' }] },
   { label: 'Output', items: [{ label: 'Reports', id: 'reports' }] },
-  { label: 'System', items: [{ label: 'Settings', id: 'settings' }] },
+  { label: 'System', items: [{ label: 'Settings', id: 'settings', available: true }] },
 ]
 
 export function Sidebar({
