@@ -497,3 +497,37 @@ button { font: inherit; cursor: pointer; }
 @media (max-width: 1250px) { .ai-reference-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .ai-reference-add { grid-template-columns: 1fr; } }
 @media (max-width: 900px) { .ai-reference-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 640px) { .ai-reference-head { align-items: flex-start; flex-direction: column; } .ai-reference-banner { align-items: flex-start; flex-direction: column; gap: 4px; } .ai-reference-grid { grid-template-columns: 1fr; } .ai-reference-quick-add { grid-template-columns: repeat(5, 145px); overflow-x: auto; padding-bottom: 4px; } .ai-reference-quick-add button { min-width: 145px; } }
+
+/* Security log analysis */
+.log-analysis-panel { display: grid; gap: 18px; }
+.log-analysis-upload { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 14px; border: 1px dashed var(--cm-border); border-radius: 12px; background: var(--cm-surface-soft); }
+.log-analysis-file-label { display: inline-flex; align-items: center; gap: 8px; border-radius: 8px; background: var(--cm-primary); color: #fff; padding: 10px 14px; cursor: pointer; font-weight: 600; }
+.log-analysis-file-label input { max-width: 240px; font-size: 12px; }
+.log-analysis-upload > span { color: var(--cm-muted); font-size: 13px; }
+.log-analysis-paste-label, .log-analysis-toolbar label { display: grid; gap: 7px; font-size: 13px; font-weight: 600; color: var(--cm-text); }
+.log-analysis-paste-label textarea, .log-analysis-toolbar input, .log-analysis-toolbar select { width: 100%; min-width: 0; border: 1px solid var(--cm-border); border-radius: 8px; padding: 10px 12px; color: var(--cm-text); background: white; font: inherit; font-weight: 400; }
+.log-analysis-paste-label textarea { resize: vertical; line-height: 1.5; }
+.log-analysis-summary { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.log-severity-card { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; border: 1px solid var(--cm-border); border-radius: 10px; background: white; padding: 13px; cursor: pointer; text-transform: capitalize; }
+.log-severity-card[aria-pressed="true"] { outline: 2px solid var(--cm-primary); outline-offset: 1px; }
+.log-severity-card strong { font-size: 24px; color: var(--cm-text-strong); }
+.log-severity-critical { color: #a52630; }
+.log-severity-high { color: #bd4b38; }
+.log-severity-medium { color: #946716; }
+.log-severity-low { color: #426e9b; }
+.log-severity-info { color: #54717b; }
+.log-analysis-toolbar { display: grid; grid-template-columns: minmax(160px, 1fr) minmax(140px, .55fr) auto; gap: 12px; align-items: end; }
+.log-analysis-disclaimer { margin: 0; color: var(--cm-muted); font-size: 12px; line-height: 1.5; }
+.log-analysis-results { border: 1px solid var(--cm-border); border-radius: 12px; overflow: hidden; background: white; }
+.log-analysis-results-heading { display: flex; justify-content: space-between; align-items: center; padding: 14px; background: var(--cm-surface-soft); border-bottom: 1px solid var(--cm-border); }
+.log-analysis-results-heading span { color: var(--cm-muted); font-size: 12px; }
+.log-analysis-results > .project-analysis-hint { padding: 14px; }
+.log-analysis-event { padding: 13px 14px; border-bottom: 1px solid var(--cm-border); }
+.log-analysis-event:last-child { border-bottom: 0; }
+.log-analysis-event p { margin: 8px 0 0; color: var(--cm-text); font-size: 13px; line-height: 1.55; overflow-wrap: anywhere; white-space: pre-wrap; }
+.log-analysis-event-meta { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; color: var(--cm-muted); font-size: 11px; }
+.log-severity-pill { border-radius: 999px; padding: 3px 8px; background: #eef2f4; color: #36505a; font-weight: 700; text-transform: uppercase; }
+.log-severity-pill.log-severity-critical, .log-severity-pill.log-severity-high { background: #fce8e8; color: #9b2630; }
+.log-severity-pill.log-severity-medium { background: #fff2d8; color: #805711; }
+.log-severity-pill.log-severity-low { background: #e8f1fb; color: #315e8b; }
+@media (max-width: 700px) { .log-analysis-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } .log-analysis-toolbar { grid-template-columns: 1fr; } .log-analysis-file-label { flex-wrap: wrap; max-width: 100%; } }
