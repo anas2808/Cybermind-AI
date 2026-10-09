@@ -9,13 +9,11 @@ export type Project = {
 
 export class ApiError extends Error {
   status: number
-  detail: string
 
-  constructor(status: number, detail = '') {
-    super(detail || `API request failed with status ${status}`)
+  constructor(status: number) {
+    super(`API request failed with status ${status}`)
     this.name = 'ApiError'
     this.status = status
-    this.detail = detail
   }
 }
 
@@ -67,15 +65,7 @@ async function authenticatedFetch(path: string, init: RequestInit = {}) {
   }
 
   if (!response.ok) {
-    let detail = ''
-    try {
-      const payload = await response.clone().json() as { detail?: unknown; message?: unknown }
-      if (typeof payload.detail === 'string') detail = payload.detail
-      else if (typeof payload.message === 'string') detail = payload.message
-    } catch {
-      // Keep a status-based error when the response is not JSON.
-    }
-    throw new ApiError(response.status, detail)
+    throw new ApiError(response.status)
   }
 
   return response
@@ -269,6 +259,23 @@ export type LogAnalysisFinding = {
   description: string
   evidence: string
   recommendation: string
+  why_it_matters?: string
+  timestamp?: string
+  source?: string
+  related_events?: string[]
+  confidence?: string
+  follow_up?: string
+}
+export type LogTimelineItem = {
+  timestamp: string
+  event: string
+  significance: string
+  evidence: string
+}
+export type LogRecommendations = {
+  immediate: string[]
+  short_term: string[]
+  preventive: string[]
 }
 export type LogAnalysisResult = {
   provider_id: string
@@ -278,6 +285,10 @@ export type LogAnalysisResult = {
   findings: LogAnalysisFinding[]
   lines_analyzed: number
   limitations: string[]
+  time_range?: string
+  assessment?: 'normal' | 'suspicious' | 'possible_incident' | 'uncertain'
+  timeline?: LogTimelineItem[]
+  recommendations?: LogRecommendations
 }
 export async function analyzeSecurityLogs(providerId: string, modelId: string, fileName: string, logContent: string): Promise<LogAnalysisResult> {
   const response = await authenticatedFetch('/api/security/logs/analyze', {
