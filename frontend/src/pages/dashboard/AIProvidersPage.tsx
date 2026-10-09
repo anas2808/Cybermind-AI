@@ -83,12 +83,32 @@ function getProviderBrand(provider: AIProvider): ProviderBrand | null {
 
 function ProviderBrandIcon({ provider, fallback, size = 27 }: { provider: AIProvider; fallback: IconName; size?: number }) {
   const brand = getProviderBrand(provider)
+
+  // Keep provider identity visible even when external logo hosts are blocked
+  // or a brand is missing from an icon catalog. The local mark has no network
+  // dependency, so the card never renders an empty image box.
+  if (!brand) return <Icon name={fallback} size={size} />
+
+  if (brand.slug === 'groq') {
+    return <svg
+      className="ai-reference-icon ai-reference-local-brand"
+      width={size}
+      height={size}
+      viewBox="0 0 32 32"
+      role="img"
+      aria-label="Groq logo"
+      title="Groq"
+    >
+      <rect x="2" y="2" width="28" height="28" rx="7" fill="#111820" />
+      <path d="M21.8 10.5a8 8 0 1 0 1.1 9.2h-7v-4h11v2a11 11 0 1 1-3-9.1z" fill="#fff" />
+    </svg>
+  }
+
   const [sourceIndex, setSourceIndex] = useState(0)
+  if (sourceIndex > 2) {
+    return <span className="ai-reference-local-brand" role="img" aria-label={`${brand.label} logo`} title={brand.label} style={{ width: size, height: size, display: 'grid', placeItems: 'center', fontSize: Math.round(size * 0.52), fontWeight: 800, lineHeight: 1, color: '#111820' }}>{brand.label === 'Google Gemini' ? '✦' : brand.label.slice(0, 1).toUpperCase()}</span>
+  }
 
-  if (!brand || sourceIndex > 2) return <Icon name={fallback} size={size} />
-
-  // Try independent hosts and an explicit icon color. Some browser/network
-  // configurations block one CDN; provider identity remains dynamically mapped.
   const sources = [
     `https://cdn.simpleicons.org/${brand.slug}/111820`,
     `https://cdn.jsdelivr.net/npm/simple-icons@v14/icons/${brand.slug}.svg`,
