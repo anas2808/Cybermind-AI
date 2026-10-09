@@ -43,21 +43,21 @@ function providerMeta(provider: AIProvider) {
 type ProviderBrand = { label: string; domain: string; matches: RegExp }
 
 const PROVIDER_BRANDS: ProviderBrand[] = [
-  { label: 'Ollama', domain: 'ollama.com', matches: /\\bollama\\b/ },
-  { label: 'OpenAI', domain: 'openai.com', matches: /\\b(openai|gpt-4|gpt-3|chatgpt)\\b/ },
-  { label: 'Anthropic', domain: 'anthropic.com', matches: /\\b(anthropic|claude)\\b/ },
-  { label: 'Google Gemini', domain: 'gemini.google.com', matches: /\\b(gemini|google ai|google generative)\\b/ },
-  { label: 'Meta', domain: 'meta.com', matches: /\\b(meta|llama)\\b/ },
-  { label: 'Mistral AI', domain: 'mistral.ai', matches: /\\b(mistral|mixtral|codestral)\\b/ },
-  { label: 'DeepSeek', domain: 'deepseek.com', matches: /\\bdeepseek\\b/ },
-  { label: 'Cohere', domain: 'cohere.com', matches: /\\bcohere\\b/ },
-  { label: 'Hugging Face', domain: 'huggingface.co', matches: /\\b(hugging ?face|hf inference)\\b/ },
-  { label: 'Groq', domain: 'groq.com', matches: /\\bgroq\\b/ },
-  { label: 'Perplexity', domain: 'perplexity.ai', matches: /\\bperplexity\\b/ },
-  { label: 'xAI', domain: 'x.ai', matches: /\\b(xai|grok)\\b/ },
-  { label: 'Qwen', domain: 'qwen.ai', matches: /\\b(qwen|alibaba cloud)\\b/ },
-  { label: 'Microsoft Azure', domain: 'azure.microsoft.com', matches: /\\b(azure openai|microsoft azure)\\b/ },
-  { label: 'Amazon Bedrock', domain: 'aws.amazon.com', matches: /\\b(amazon bedrock|aws bedrock)\\b/ },
+  { label: 'Ollama', domain: 'ollama.com', matches: /\bollama\b/ },
+  { label: 'OpenAI', domain: 'openai.com', matches: /\b(openai|gpt-4|gpt-3|chatgpt)\b/ },
+  { label: 'Anthropic', domain: 'anthropic.com', matches: /\b(anthropic|claude)\b/ },
+  { label: 'Google Gemini', domain: 'gemini.google.com', matches: /\b(gemini|google ai|google generative)\b/ },
+  { label: 'Meta', domain: 'meta.com', matches: /\b(meta|llama)\b/ },
+  { label: 'Mistral AI', domain: 'mistral.ai', matches: /\b(mistral|mixtral|codestral)\b/ },
+  { label: 'DeepSeek', domain: 'deepseek.com', matches: /\bdeepseek\b/ },
+  { label: 'Cohere', domain: 'cohere.com', matches: /\bcohere\b/ },
+  { label: 'Hugging Face', domain: 'huggingface.co', matches: /\b(hugging ?face|hf inference)\b/ },
+  { label: 'Groq', domain: 'groq.com', matches: /\bgroq\b/ },
+  { label: 'Perplexity', domain: 'perplexity.ai', matches: /\bperplexity\b/ },
+  { label: 'xAI', domain: 'x.ai', matches: /\b(xai|grok)\b/ },
+  { label: 'Qwen', domain: 'qwen.ai', matches: /\b(qwen|alibaba cloud)\b/ },
+  { label: 'Microsoft Azure', domain: 'azure.microsoft.com', matches: /\b(azure openai|microsoft azure)\b/ },
+  { label: 'Amazon Bedrock', domain: 'aws.amazon.com', matches: /\b(amazon bedrock|aws bedrock)\b/ },
 ]
 
 function getProviderBrand(provider: AIProvider): ProviderBrand | null {
