@@ -40,6 +40,51 @@ function providerMeta(provider: AIProvider) {
   return { label: provider.provider_type, tone: 'neutral', icon: 'cube' as IconName, description: 'Configured AI endpoint.' }
 }
 
+type ProviderBrand = { label: string; slug: string }
+
+const PROVIDER_BRANDS: Array<{ label: string; slug: string; matches: RegExp }> = [
+  { label: 'Ollama', slug: 'ollama', matches: /\\bollama\\b/ },
+  { label: 'OpenAI', slug: 'openai', matches: /\\b(openai|gpt-4|gpt-3|chatgpt)\\b/ },
+  { label: 'Anthropic', slug: 'anthropic', matches: /\\b(anthropic|claude)\\b/ },
+  { label: 'Google Gemini', slug: 'googlegemini', matches: /\\b(gemini|google ai|google generative)\\b/ },
+  { label: 'Meta', slug: 'meta', matches: /\\b(meta|llama)\\b/ },
+  { label: 'Mistral AI', slug: 'mistralai', matches: /\\b(mistral|mixtral|codestral)\\b/ },
+  { label: 'DeepSeek', slug: 'deepseek', matches: /\\bdeepseek\\b/ },
+  { label: 'Cohere', slug: 'cohere', matches: /\\bcohere\\b/ },
+  { label: 'Hugging Face', slug: 'huggingface', matches: /\\b(hugging ?face|hf inference)\\b/ },
+  { label: 'Groq', slug: 'groq', matches: /\\bgroq\\b/ },
+  { label: 'Perplexity', slug: 'perplexity', matches: /\\bperplexity\\b/ },
+  { label: 'xAI', slug: 'x', matches: /\\b(xai|grok)\\b/ },
+  { label: 'Qwen', slug: 'qwen', matches: /\\b(qwen|alibaba cloud)\\b/ },
+  { label: 'Microsoft Azure', slug: 'microsoftazure', matches: /\\b(azure openai|microsoft azure)\\b/ },
+  { label: 'Amazon Bedrock', slug: 'amazonaws', matches: /\\b(amazon bedrock|aws bedrock)\\b/ },
+]
+
+function getProviderBrand(provider: AIProvider): ProviderBrand | null {
+  const identity = `${provider.name} ${provider.endpoint}`.toLowerCase()
+  return PROVIDER_BRANDS.find((brand) => brand.matches.test(identity)) || null
+}
+
+function ProviderBrandIcon({ provider, fallback, size = 27 }: { provider: AIProvider; fallback: IconName; size?: number }) {
+  const brand = getProviderBrand(provider)
+  const [imageFailed, setImageFailed] = useState(false)
+
+  if (!brand || imageFailed) return <Icon name={fallback} size={size} />
+
+  return <img
+    className="ai-reference-brand-image"
+    src={`https://cdn.simpleicons.org/${brand.slug}`}
+    alt=""
+    aria-label={`${brand.label} logo`}
+    title={`${brand.label} detected from provider name or endpoint`}
+    width={size}
+    height={size}
+    loading="lazy"
+    referrerPolicy="no-referrer"
+    onError={() => setImageFailed(true)}
+  />
+}
+
 function formatLastTested(value: string | null) {
   if (!value) return 'Not tested'
   const minutes = Math.max(0, Math.round((Date.now() - new Date(value).getTime()) / 60000))
@@ -135,7 +180,7 @@ export function AIProvidersPage({ onProvidersChanged }: AIProvidersPageProps) {
               <article className="ai-reference-card" key={provider.id}>
                 <div className="ai-reference-card-top">
                   <div className="ai-reference-identity">
-                    <span className={`ai-reference-logo ${meta.tone}`}><Icon name={meta.icon} size={meta.icon === 'openai' ? 31 : 27} /></span>
+                    <span className={`ai-reference-logo ${meta.tone}`}><ProviderBrandIcon provider={provider} fallback={meta.icon} size={meta.icon === 'openai' ? 31 : 27} /></span>
                     <div><div className="ai-reference-name">{provider.name}<span className={`ai-reference-tag ${meta.tone}`}>{meta.label}</span></div><div className={connected ? 'ai-reference-status' : 'ai-reference-status off'}>{connected ? 'Connected' : provider.connection_status}</div></div>
                   </div>
                 </div>
