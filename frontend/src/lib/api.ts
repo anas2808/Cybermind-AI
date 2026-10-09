@@ -251,3 +251,29 @@ export async function analyzeFeatureSecurity(
   })
   return parseResponse<FeatureSecurityAnalysis>(response)
 }
+
+
+export type LogAnalysisFinding = {
+  title: string
+  severity: 'critical' | 'high' | 'medium' | 'low' | 'informational'
+  description: string
+  evidence: string
+  recommendation: string
+}
+export type LogAnalysisResult = {
+  provider_id: string
+  model_id: string
+  file_name: string
+  summary: string
+  findings: LogAnalysisFinding[]
+  lines_analyzed: number
+  limitations: string[]
+}
+export async function analyzeSecurityLogs(providerId: string, modelId: string, fileName: string, logContent: string): Promise<LogAnalysisResult> {
+  const response = await authenticatedFetch('/api/security/logs/analyze', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ provider_id: providerId, model_id: modelId, file_name: fileName, log_content: logContent }),
+  })
+  return parseResponse<LogAnalysisResult>(response)
+}
