@@ -9,11 +9,13 @@ export type Project = {
 
 export class ApiError extends Error {
   status: number
+  detail: string
 
-  constructor(status: number) {
-    super(`API request failed with status ${status}`)
+  constructor(status: number, detail = '') {
+    super(detail || `API request failed with status ${status}`)
     this.name = 'ApiError'
     this.status = status
+    this.detail = detail
   }
 }
 
@@ -65,7 +67,15 @@ async function authenticatedFetch(path: string, init: RequestInit = {}) {
   }
 
   if (!response.ok) {
-    throw new ApiError(response.status)
+    let detail = ''
+    try {
+      const payload = await response.clone().json() as { detail?: unknown; message?: unknown }
+      if (typeof payload.detail === 'string') detail = payload.detail
+      else if (typeof payload.message === 'string') detail = payload.message
+    } catch {
+      // Keep a status-based error when the response is not JSON.
+    }
+    throw new ApiError(response.status, detail)
   }
 
   return response
