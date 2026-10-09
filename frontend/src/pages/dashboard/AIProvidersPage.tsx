@@ -84,6 +84,14 @@ function ProviderBrandIcon({ provider, fallback, size = 27 }: { provider: AIProv
   const token = import.meta.env.VITE_LOGO_DEV_TOKEN
   const [failed, setFailed] = useState(false)
 
+  // Keep Groq recognizable even if Logo.dev is unavailable or not configured.
+  if (brand?.label === 'Groq' && (!token || failed)) {
+    return <svg className="ai-reference-icon ai-reference-local-brand" width={size} height={size} viewBox="0 0 32 32" role="img" aria-label="Groq logo fallback" title="Groq">
+      <rect x="2" y="2" width="28" height="28" rx="7" fill="#111820" />
+      <path d="M21.8 10.5a8 8 0 1 0 1.1 9.2h-7v-4h11v2a11 11 0 1 1-3-9.1z" fill="#fff" />
+    </svg>
+  }
+
   if (!brand || !token || failed) {
     if (brand) {
       return <span className="ai-reference-local-brand" role="img" aria-label={`${brand.label} logo fallback`} title={brand.label} style={{ width: size, height: size, display: 'grid', placeItems: 'center', fontSize: Math.round(size * 0.52), fontWeight: 800, lineHeight: 1, color: '#111820' }}>{brand.label === 'Google Gemini' ? '✦' : brand.label.slice(0, 1).toUpperCase()}</span>
