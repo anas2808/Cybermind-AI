@@ -16,10 +16,48 @@ type AIProvidersPageProps = {
   onProvidersChanged?: () => void
 }
 
-function providerMeta(providerType: string) {
-  if (providerType === 'ollama') return { label: 'LOCAL', icon: 'O', description: 'Local model runtime' }
-  if (providerType === 'openai_compatible') return { label: 'API', icon: 'A', description: 'OpenAI-compatible endpoint' }
-  return { label: 'CUSTOM', icon: '↗', description: 'Custom AI endpoint' }
+function providerMeta(provider: AIProvider) {
+  const name = provider.name.toLowerCase()
+  if (provider.provider_type === 'ollama' || name.includes('ollama')) {
+    return { label: 'LOCAL', icon: 'llama', category: 'Local models', description: 'Run open-source models locally on your machine or server.' }
+  }
+  if (name.includes('phone') || name.includes('mobile')) {
+    return { label: 'LOCAL NETWORK', icon: 'phone', category: 'Local network', description: 'AI service available on your local network.' }
+  }
+  if (name.includes('openai') && !name.includes('compatible')) {
+    return { label: 'CLOUD', icon: 'openai', category: 'Cloud API', description: 'Connect to an OpenAI API endpoint.' }
+  }
+  if (name.includes('anthropic') || name.includes('claude')) {
+    return { label: 'CLOUD', icon: 'anthropic', category: 'Cloud API', description: 'Connect to an Anthropic-compatible endpoint.' }
+  }
+  if (provider.provider_type === 'openai_compatible') {
+    return { label: 'API', icon: 'compatible', category: 'OpenAI-compatible endpoint', description: 'Connect to a cloud, LAN, or self-hosted compatible API.' }
+  }
+  return { label: 'CUSTOM', icon: 'custom', category: 'Custom endpoint', description: 'Connect to a custom AI service endpoint.' }
+}
+
+function ProviderLogo({ kind }: { kind: string }) {
+  if (kind === 'anthropic') {
+    return <span className="ai-provider-logo ai-provider-logo-anthropic" aria-hidden="true">A</span>
+  }
+  return (
+    <span className={`ai-provider-logo ai-provider-logo-${kind}`} aria-hidden="true">
+      {kind === 'phone' ? '▯' : kind === 'openai' ? '◎' : kind === 'llama' ? '◉' : kind === 'compatible' ? '⬡' : kind === 'custom' ? '↗' : 'AI'}
+    </span>
+  )
+}
+
+function timeSince(value: string | null) {
+  if (!value) return '—'
+  const timestamp = new Date(value).getTime()
+  if (!Number.isFinite(timestamp)) return '—'
+  const minutes = Math.max(0, Math.floor((Date.now() - timestamp) / 60000))
+  if (minutes < 1) return 'Just now'
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`
+  const days = Math.floor(hours / 24)
+  return `${days} day${days === 1 ? '' : 's'} ago`
 }
 
 export function AIProvidersPage({ onProvidersChanged }: AIProvidersPageProps) {
@@ -134,73 +172,57 @@ export function AIProvidersPage({ onProvidersChanged }: AIProvidersPageProps) {
           <div className="projects-empty-icon" aria-hidden="true">+</div>
           <div>
             <strong>No AI providers configured</strong>
-            <p>Add an Ollama, cloud, LAN, phone, or custom AI endpoint to make a model available for project analysis.</p>
+            <p>Add an Ollama, cloud, LAN, or custom AI endpoint to make a model available for project analysis.</p>
           </div>
         </div>
       ) : (
         <div className="ai-provider-list">
           {providers.map((provider) => {
-            const meta = providerMeta(provider.provider_type)
+            const meta = providerMeta(provider)
             const providerModels = models[provider.id] || []
             return (
-            <article className="ai-provider-card" key={provider.id}>
-              <div className="ai-provider-card-head">
-                <div className="ai-provider-identity">
-                  <span className="ai-provider-logo" aria-hidden="true">{meta.icon}</span>
-                  <div>
-                    <div className="ai-provider-title-row">
-                      <p className="ai-provider-type">{meta.label}</p>
-                      <span className="ai-provider-kind">{meta.description}</span>
+              <article className="ai-provider-card" key={provider.id}>
+                <div className="ai-provider-card-head">
+                  <div className="ai-provider-identity">
+                    <ProviderLogo kind={meta.icon} />
+                    <div className="ai-provider-heading">
+                      <div className="ai-provider-title-row">
+                        <h3>{provider.name}</h3>
+                        <span className={`ai-provider-kind ${meta.icon === 'phone' ? 'kind-green' : meta.icon === 'anthropic' ? 'kind-orange' : 'kind-blue'}`}>
+                          {meta.category}
+                        </span>
+                      </div>
+                      <span className={provider.connection_status === 'connected' ? 'ai-provider-status ai-provider-status-ok' : 'ai-provider-status'}>
+                        <i aria-hidden="true" />
+                        {provider.connection_status === 'connected' ? 'Connected' : provider.connection_status || 'Not tested'}
+                      </span>
                     </div>
-                    <h3>{provider.name}</h3>
-                    <p className="ai-provider-endpoint">{provider.endpoint}</p>
                   </div>
                 </div>
-                <span className={provider.connection_status === 'connected' ? 'ai-provider-status ai-provider-status-ok' : 'ai-provider-status'}>
-                  <i aria-hidden="true" />
-                  {provider.connection_status}
-                </span>
-              </div>
-              <div className="ai-provider-summary">
-                <div><span>Models</span><strong>{providerModels.length}</strong></div>
-                <div><span>Auth</span><strong>{provider.auth_type === 'api_key' ? 'API key' : 'None'}</strong></div>
-                <div><span>State</span><strong>{provider.enabled ? 'Enabled' : 'Disabled'}</strong></div>
-              </div>
-
-              <div className="ai-provider-actions">
-                <button type="button" onClick={() => void handleTest(provider.id)} disabled={testingId === provider.id}>
-                  {testingId === provider.id ? 'Testing...' : 'Test connection'}
-                </button>
-                <button type="button" onClick={() => void handleDiscover(provider.id)} disabled={discoveringId === provider.id}>
-                  {discoveringId === provider.id ? 'Discovering...' : 'Discover models'}
-                </button>
-                <button type="button" className="ai-provider-remove" onClick={() => void handleDelete(provider.id)} disabled={deletingId === provider.id}>
-                  {deletingId === provider.id ? 'Removing...' : 'Remove'}
-                </button>
-              </div>
-
-              <div className="ai-provider-models">
-                <div className="ai-provider-models-head">
-                  <strong>Available models</strong>
-                  <span>{(models[provider.id] || []).length}</span>
+                <p className="ai-provider-description">{meta.description}</p>
+                <div className="ai-provider-details">
+                  <div className="ai-provider-detail-row">
+                    <span className="detail-icon" aria-hidden="true">⚙</span><span>Endpoint</span><strong title={provider.endpoint}>{provider.endpoint}</strong>
+                  </div>
+                  <div className="ai-provider-detail-row">
+                    <span className="detail-icon" aria-hidden="true">⬡</span><span>Models</span><strong>{providerModels.length} {providerModels.length === 1 ? 'model' : 'models'}</strong>
+                  </div>
+                  <div className="ai-provider-detail-row">
+                    <span className="detail-icon" aria-hidden="true">◷</span><span>Last tested</span><strong>{timeSince(provider.last_tested_at)}</strong>
+                  </div>
                 </div>
-                {providerModels.length > 0 ? (
-                  <ul>
-                    {providerModels.map((model) => (
-                      <li key={model.id}>
-                        <span>
-                          <strong>{model.display_name}</strong>
-                          <small>{model.model_id}</small>
-                        </span>
-                        <em>{model.availability}</em>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p>No models discovered yet. Use “Discover models” to query this provider.</p>
-                )}
-              </div>
-            </article>
+                <div className="ai-provider-actions">
+                  <button type="button" onClick={() => void handleTest(provider.id)} disabled={testingId === provider.id}>
+                    {testingId === provider.id ? 'Testing...' : 'Test'}
+                  </button>
+                  <button type="button" onClick={() => void handleDiscover(provider.id)} disabled={discoveringId === provider.id}>
+                    {discoveringId === provider.id ? 'Discovering...' : 'Discover models'}
+                  </button>
+                  <button type="button" className="ai-provider-remove" onClick={() => void handleDelete(provider.id)} disabled={deletingId === provider.id}>
+                    {deletingId === provider.id ? 'Removing...' : 'Remove'}
+                  </button>
+                </div>
+              </article>
             )
           })}
         </div>
@@ -209,25 +231,27 @@ export function AIProvidersPage({ onProvidersChanged }: AIProvidersPageProps) {
       {!isLoading && (
         <section className="ai-provider-add-panel" aria-labelledby="ai-provider-add-heading">
           <div className="ai-provider-add-copy">
-            <div className="ai-provider-add-icon" aria-hidden="true">+</div>
+            <div className="ai-provider-add-icon" aria-hidden="true">⚙</div>
             <div>
-              <p className="section-kicker">Provider catalog</p>
-              <h3 id="ai-provider-add-heading">Add a new AI provider</h3>
-              <p>Connect a local runtime, cloud API, LAN service, or another OpenAI-compatible endpoint.</p>
+              <h3 id="ai-provider-add-heading">Add New AI Provider</h3>
+              <p>Connect to any AI provider - local, cloud, or custom endpoint.</p>
             </div>
           </div>
           <div className="ai-provider-add-options">
-            <button type="button" onClick={() => setShowAdd(true)}>
-              <span className="ai-provider-option-icon">O</span>
-              <span><strong>Ollama</strong><small>Local</small></span>
+            <button type="button" className="tile-blue" onClick={() => setShowAdd(true)}>
+              <span className="ai-provider-option-icon">◉</span><span><strong>Ollama</strong><small>Local models</small></span>
             </button>
-            <button type="button" onClick={() => setShowAdd(true)}>
-              <span className="ai-provider-option-icon">A</span>
-              <span><strong>OpenAI-compatible</strong><small>Cloud / LAN</small></span>
+            <button type="button" className="tile-green" onClick={() => setShowAdd(true)}>
+              <span className="ai-provider-option-icon">⬡</span><span><strong>OpenAI Compatible</strong><small>(Any API endpoint)</small></span>
             </button>
-            <button type="button" onClick={() => setShowAdd(true)}>
-              <span className="ai-provider-option-icon">↗</span>
-              <span><strong>Custom endpoint</strong><small>HTTP API</small></span>
+            <button type="button" className="tile-blue" onClick={() => setShowAdd(true)}>
+              <span className="ai-provider-option-icon">◎</span><span><strong>OpenAI</strong><small>(Official API)</small></span>
+            </button>
+            <button type="button" className="tile-orange" onClick={() => setShowAdd(true)}>
+              <span className="ai-provider-option-icon">A</span><span><strong>Anthropic</strong><small>Claude models</small></span>
+            </button>
+            <button type="button" className="tile-neutral" onClick={() => setShowAdd(true)}>
+              <span className="ai-provider-option-icon">↗</span><span><strong>Custom Endpoint</strong><small>HTTP endpoint</small></span>
             </button>
           </div>
         </section>
