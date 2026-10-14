@@ -1,26 +1,66 @@
-# Offline Windows Event Triage
+# Windows Event Collection and Offline Triage
 
-This helper extends the read-only Windows Event Log Collector with local duplicate grouping and cautious review priorities. It uses Python's standard library only and does not upload or transmit logs.
+CyberMind AI can collect recent Windows events and generate a local Markdown triage report automatically. It uses PowerShell and Python's standard library; the scripts do not upload or transmit event logs.
 
-## 1. Collect events
+## Recommended: set up automatic collection once
 
-From the repository root in PowerShell:
+From the repository root in PowerShell, run:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\windows_collector\setup_automatic_triage.ps1
+```
+
+This registers a Windows Scheduled Task for the current Windows user. It runs at sign-in and then every 15 minutes while that user is signed in, collecting up to 200 recent events from each of the System and Application logs and refreshing the report. Python 3 must be installed and available as `python` on PATH. The setup does not request administrator privileges.
+
+To choose a different event limit or interval:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\windows_collector\setup_automatic_triage.ps1 -MaxEventsPerLog 100 -IntervalMinutes 30
+```
+
+The interval must be 5–1440 minutes and the event limit 1–500 per log.
+
+The report and local run log are written to:
+
+- `windows_collector/output/windows_triage_report.md`
+- `windows_collector/output/automatic_triage.log`
+
+To open the report:
+
+```powershell
+code .\windows_collector\output\windows_triage_report.md
+```
+
+To check task status:
+
+```powershell
+Get-ScheduledTask -TaskName 'CyberMind AI Automatic Windows Triage'
+Get-ScheduledTaskInfo -TaskName 'CyberMind AI Automatic Windows Triage'
+```
+
+To uninstall automatic collection:
+
+```powershell
+Unregister-ScheduledTask -TaskName 'CyberMind AI Automatic Windows Triage' -Confirm:$false
+```
+
+The scheduled task runs with the current user's permissions and while the user is signed in; it is not an elevated system-wide service. Every person/computer must approve this one-time setup locally. Collection is limited to System and Application logs; Security logs are not collected.
+
+## Manual mode
+
+Collect events:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\windows_collector\collect_events.ps1
 ```
 
-The collector currently reads System and Application logs.
-
-## 2. Generate the report
+Generate the report:
 
 ```powershell
 python .\windows_collector\analyze_events.py
 ```
 
-By default, it reads `windows_collector/output/windows_events.json` and writes `windows_collector/output/windows_triage_report.md`.
-
-Use a custom path with:
+Custom input/output:
 
 ```powershell
 python .\windows_collector\analyze_events.py .\path\to\windows_events.json --output .\triage-report.md
@@ -38,4 +78,4 @@ These heuristics are explainable review aids, not a guarantee of detection. Vali
 
 ## Privacy
 
-The script reads a local JSON export and writes a local Markdown report. It does not call an AI provider or send data over the network. Exports and reports may contain sensitive machine or application details; do not commit them.
+Exports, reports, and the run log may contain sensitive machine or application details. They are ignored by Git. Review them locally and do not commit them.
