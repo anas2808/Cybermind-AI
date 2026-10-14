@@ -1,17 +1,34 @@
 param(
-    [ValidateRange(1, 500)]
-    [int]$MaxEventsPerLog = 50,
+    [int]$MaxEventsPerLog = 0,
     [string]$OutputPath = (Join-Path $PSScriptRoot 'output\windows_events.json')
 )
 
 $ErrorActionPreference = 'Stop'
+
+if ($MaxEventsPerLog -eq 0) {
+    $answer = Read-Host 'How many recent events should be collected from EACH log? Enter 1-500 (press Enter for 50)'
+    if ([string]::IsNullOrWhiteSpace($answer)) {
+        $MaxEventsPerLog = 50
+    }
+    elseif ($answer -match '^\d+$') {
+        $MaxEventsPerLog = [int]$answer
+    }
+    else {
+        throw 'Please enter a whole number from 1 to 500.'
+    }
+}
+
+if ($MaxEventsPerLog -lt 1 -or $MaxEventsPerLog -gt 500) {
+    throw 'MaxEventsPerLog must be between 1 and 500.'
+}
+
 $logNames = @('System', 'Application')
 $allEvents = [System.Collections.Generic.List[object]]::new()
 $collectionErrors = [System.Collections.Generic.List[string]]::new()
 
 Write-Host 'CyberMind AI - Windows Event Log Collector' -ForegroundColor Green
 Write-Host 'Read-only mode. No events will be changed or transmitted.'
-Write-Host "Maximum events per log: $MaxEventsPerLog"
+Write-Host "Maximum events per log: $MaxEventsPerLog (up to $($MaxEventsPerLog * $logNames.Count) total)"
 
 foreach ($logName in $logNames) {
     Write-Host "`n========== $logName ==========" -ForegroundColor Cyan
@@ -45,6 +62,7 @@ New-Item -ItemType Directory -Path $outputDirectory -Force | Out-Null
 $export = [PSCustomObject]@{
     collected_at = [DateTime]::UtcNow.ToString('o')
     computer_name = $env:COMPUTERNAME
+    max_events_per_log = $MaxEventsPerLog
     event_count = $allEvents.Count
     logs_requested = $logNames
     collection_errors = @($collectionErrors.ToArray())
