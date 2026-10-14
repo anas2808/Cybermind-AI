@@ -5,3 +5,4 @@ __pycache__/
 
 # Local Windows Event Viewer exports can contain sensitive system data.
 windows_collector/output/*.json
+windows_collector/output/*.md
