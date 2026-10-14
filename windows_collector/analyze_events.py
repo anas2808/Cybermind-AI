@@ -11,7 +11,6 @@ def normalize_message(value):
     text = str(value or "").strip().lower()
     text = re.sub(r"\s+", " ", text)
     text = re.sub(r"\b[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\b", "<guid>", text)
-    text = re.sub(r"\b[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\b", "<guid>", text)
     return text
 
 def parse_time(value):
