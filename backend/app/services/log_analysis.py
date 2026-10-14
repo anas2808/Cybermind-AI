@@ -68,7 +68,24 @@ async def analyze_security_logs(
         "If no meaningful security issue is evidenced, return an empty findings array; routine operational errors "
         "may be summarized without being escalated as security findings."
     )
-    context = f"File name: {file_name}\nLog line count: {len(content.splitlines())}\n\nUNTRUSTED LOG DATA BEGIN\n{content}\nUNTRUSTED LOG DATA END"
+    context = (
+        f"File name: {file_name}\n"
+        f"Log line count: {len(content.splitlines())}\n\n"
+        "SEVERITY CALIBRATION FOR WINDOWS EVENTS:\n"
+        "- Windows Event ID 5038 (Code Integrity image hash invalid) is an integrity warning, not proof of malware. "
+        "Default to MEDIUM/investigation-needed when the event is repeated or the file identity is unknown; use LOW "
+        "for an isolated event without corroborating indicators. Escalate to HIGH only when other supplied evidence "
+        "supports likely malicious tampering, an untrusted/unsigned executable, or related compromise. Do not infer "
+        "those facts if they are not in the logs.\n"
+        "- A generic failed-logon message is not enough for HIGH severity. Consider frequency, account, source, "
+        "logon type, and related events when those details are actually present. Isolated failures are usually "
+        "INFORMATIONAL/LOW; escalate only for a supported suspicious pattern.\n"
+        "- Repeated copies of the same event should normally be consolidated into one finding, with count and "
+        "timestamps where available, rather than emitted as many separate alerts.\n"
+        "- Distinguish operational/integrity warnings from confirmed security incidents, quote supplied evidence, "
+        "and state what additional evidence would help validate the concern.\n\n"
+        f"UNTRUSTED LOG DATA BEGIN\n{content}\nUNTRUSTED LOG DATA END"
+    )
     try:
         adapter = gateway.get_adapter(provider.provider_type)
         response = await adapter.analyze(
