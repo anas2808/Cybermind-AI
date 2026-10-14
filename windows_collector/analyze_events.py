@@ -9,9 +9,9 @@ from pathlib import Path
 
 def normalize_message(value):
     text = str(value or "").strip().lower()
-    text = re.sub(r"\\s+", " ", text)
-    text = re.sub(r"0x[0-9a-f]+", "<hex>", text)
-    text = re.sub(r"\\b[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\\b", "<guid>", text)
+    text = re.sub(r"\s+", " ", text)
+    text = re.sub(r"\b[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\b", "<guid>", text)
+    text = re.sub(r"\b[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\b", "<guid>", text)
     return text
 
 def parse_time(value):
@@ -94,7 +94,7 @@ def render(data, groups):
                       "- First seen: " + str(group["first_seen"] or "Not available"),
                       "- Last seen: " + str(group["last_seen"] or "Not available"),
                       "- Record IDs: " + (", ".join(group["record_ids"][:20]) or "Not available"),
-                      "- Why prioritized: " + group["rationale"], "", "**Example event message**", "", "    " + group["message"].replace("\\n", " "), ""])
+                      "    " + group["message"].replace("\n", " "), ""])
     errors = data.get("collection_errors") or []
     if errors:
         lines.extend(["## Collection warnings", ""] + ["- " + str(error) for error in errors] + [""])
@@ -103,7 +103,7 @@ def render(data, groups):
                   "2. Check nearby events and whether approved maintenance explains the activity.",
                   "3. Do not treat event level, keyword matches, or repeated messages alone as proof of an attack.",
                   "4. Similar events with different message text may remain separate groups.", ""])
-    return "\\n".join(lines)
+    return "\n".join(lines)
 
 def main():
     parser = argparse.ArgumentParser(description="Group repeated Windows events and create a local triage report.")
