@@ -157,8 +157,41 @@ export function LogAnalysisPanel() {
   function replaceText(text: string, name: string) { setRawText(text); setFileName(name); resetFilters(); setError(''); setAiResult(null) }
   async function loadFile(file?: File) {
     if (!file) return
-    if (file.size > 10 * 1024 * 1024) { setError('Please select a log file smaller than 10 MB.'); return }
-    try { replaceText(await file.text(), file.name); setActiveTab('upload') } catch { setError('Could not read this file. Try a plain-text .log, .txt, or .csv file.') }
+    const isJson = file.name.toLowerCase().endsWith('.json')
+    const sizeLimit = isJson ? 25 * 1024 * 1024 : 10 * 1024 * 1024
+    if (file.size > sizeLimit) { setError(`Please select a file smaller than ${isJson ? '25 MB' : '10 MB'}.`); return }
+    try {
+      const content = await file.text()
+      if (isJson) {
+        const parsed: unknown = JSON.parse(content)
+        if (!parsed || typeof parsed !== 'object' || !('events' in parsed) || !Array.isArray((parsed as { events: unknown }).events)) {
+          setError('This JSON does not look like a CyberMind Windows event export. Select windows_events.json from the collector.')
+          return
+        }
+        const exportData = parsed as { computer_name?: string; collected_at?: string; events: Array<Record<string, unknown>> }
+        const lines = exportData.events.map((event) => [
+          event.time_created || '',
+          event.level || 'Unknown',
+          event.log_name || 'Windows',
+          `EventID=${event.event_id ?? 'Unknown'}`,
+          `Provider=${event.provider || 'Unknown'}`,
+          event.message || '(No event message)',
+        ].filter(Boolean).join(' | '))
+        const metadata = [
+          '# CyberMind AI Windows Event Export',
+          `# Computer: ${exportData.computer_name || 'Unknown'}`,
+          `# Collected at: ${exportData.collected_at || 'Unknown'}`,
+          `# Events: ${lines.length}`,
+          '',
+        ].join('\n')
+        replaceText(metadata + lines.join('\n'), file.name)
+      } else {
+        replaceText(content, file.name)
+      }
+      setActiveTab('upload')
+    } catch {
+      setError(isJson ? 'Could not parse this JSON file. Please use the original windows_events.json export.' : 'Could not read this file. Try a plain-text .log, .txt, .csv, or Windows event .json file.')
+    }
   }
   async function selectProvider(id: string) {
     setProviderId(id); setModelId(''); setModels([]); setAiResult(null)
@@ -203,11 +236,21 @@ export function LogAnalysisPanel() {
   return <section className="log-analysis-panel" aria-labelledby="log-analysis-title">
     <header className="log-dashboard-heading"><div><p className="section-kicker">Security operations · Log triage</p><h2 id="log-analysis-title">Security Log Analysis</h2><p>Upload or paste application, server, authentication, or security logs to surface suspicious events and build a shareable report.</p></div><span className="log-analysis-status"><i /> Rule-based + AI assisted</span></header>
 
+    <section className="log-card log-collector-card" aria-labelledby="windows-collector-title">
+      <div className="log-card-heading"><div><h3 id="windows-collector-title">Collect Windows event logs</h3><p>Collect logs on your Windows computer, then import them here for review.</p></div><span className="log-step">QUICK START</span></div>
+      <div className="log-collector-steps">
+        <article><span>1</span><div><strong>Download the collector</strong><p>Get the read-only PowerShell script. It reads the System and Application logs only.</p><a className="log-collector-link" href="https://raw.githubusercontent.com/anas2808/CyberMind-AI/feature/security-log-analysis/windows_collector/collect_events.ps1" target="_blank" rel="noreferrer">Download Windows collector (.ps1) ↗</a></div></article>
+        <article><span>2</span><div><strong>Run it on Windows</strong><p>Open PowerShell in the folder where you saved the script and run:</p><code>powershell -NoProfile -ExecutionPolicy Bypass -File .\collect_events.ps1 -MaxEventsPerLog 200</code><p className="log-collector-note">The JSON export is saved in an <code>output</code> folder beside the script.</p></div></article>
+        <article><span>3</span><div><strong>Import the export below</strong><p>Choose <code>windows_events.json</code> under Upload file. Your logs stay in this browser until you explicitly request AI analysis.</p><button type="button" className="log-secondary-button" onClick={() => { setActiveTab('upload'); fileInputRef.current?.click() }}>Choose Windows JSON export</button></div></article>
+      </div>
+      <p className="log-collector-privacy">Privacy: collecting is local and read-only. Clicking “Analyze logs” sends the selected log text to the configured CyberMind AI backend/provider for analysis. Review sensitive details before doing so.</p>
+    </section>
+
     <div className="log-control-grid">
       <section className="log-card log-input-card">
         <div className="log-card-heading"><div><h3>Log input</h3><p>Provide the source data for analysis.</p></div><span className="log-step">01 / INPUT</span></div>
         <div className="log-tabs" role="tablist"><button type="button" className={activeTab === 'paste' ? 'active' : ''} onClick={() => setActiveTab('paste')}>Paste logs</button><button type="button" className={activeTab === 'upload' ? 'active' : ''} onClick={() => setActiveTab('upload')}>Upload file</button></div>
-        {activeTab === 'paste' ? <label className="log-field">Log content<textarea value={rawText} onChange={(event) => replaceText(event.target.value, 'Pasted log text')} rows={8} placeholder={'2026-08-12T10:15:22Z ERROR Failed login for user admin from 203.0.113.10\n2026-08-12T10:16:01Z WARN Rate limit exceeded for client'} /></label> : <button type="button" className="log-dropzone" onClick={() => fileInputRef.current?.click()} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); void loadFile(event.dataTransfer.files[0]) }}><span className="log-upload-icon">↑</span><strong>{fileName || 'Drop a log file here'}</strong><small>or choose a .log, .txt, or .csv file · up to 10 MB</small><input ref={fileInputRef} type="file" accept=".log,.txt,.csv,text/plain,text/csv" onChange={(event) => void loadFile(event.target.files?.[0])} /></button>}
+        {activeTab === 'paste' ? <label className="log-field">Log content<textarea value={rawText} onChange={(event) => replaceText(event.target.value, 'Pasted log text')} rows={8} placeholder={'2026-08-12T10:15:22Z ERROR Failed login for user admin from 203.0.113.10\n2026-08-12T10:16:01Z WARN Rate limit exceeded for client'} /></label> : <button type="button" className="log-dropzone" onClick={() => fileInputRef.current?.click()} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); void loadFile(event.dataTransfer.files[0]) }}><span className="log-upload-icon">↑</span><strong>{fileName || 'Drop a log file here'}</strong><small>or choose a .log, .txt, .csv, or Windows event .json file</small><input ref={fileInputRef} type="file" accept=".log,.txt,.csv,.json,text/plain,text/csv,application/json" onChange={(event) => void loadFile(event.target.files?.[0])} /></button>}
         {fileName && <p className="log-file-name">Selected: <strong>{fileName}</strong> · {total} non-empty lines</p>}
         {error && <p className="project-form-error" role="alert">{error}</p>}
       </section>
