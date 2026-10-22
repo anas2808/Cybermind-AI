@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Any
 from uuid import UUID
 
@@ -11,6 +12,8 @@ from app.models.ai_provider import AIModel, AIProvider
 from app.models.user import User
 from app.services.ai_provider import decrypt_credentials, gateway
 
+
+logger = logging.getLogger(__name__)
 
 MAX_LOG_CHARS = 200_000
 
@@ -121,7 +124,28 @@ async def analyze_security_logs(
             ),
         )
     except Exception as exc:
-        raise HTTPException(status_code=502, detail="Selected AI model could not analyze the logs") from exc
+        # Keep provider details in server logs for diagnosis without exposing credentials.
+        logger.exception("AI log analysis provider request failed")
+        status_code = getattr(getattr(exc, "response", None), "status_code", None)
+        if status_code == 429:
+            raise HTTPException(
+                status_code=429,
+                detail="The AI provider rate limit was reached. Wait before retrying or use a provider/model with a higher quota.",
+            ) from exc
+        if status_code in (401, 403):
+            raise HTTPException(
+                status_code=502,
+                detail="The AI provider rejected authentication. Check the provider API key and endpoint in Settings.",
+            ) from exc
+        if status_code == 400 or status_code == 413:
+            raise HTTPException(
+                status_code=502,
+                detail="The AI provider rejected the request. Reduce the selected logs or check the model's input limits.",
+            ) from exc
+        raise HTTPException(
+            status_code=502,
+            detail="The AI provider request failed. Check the backend logs for the provider error and verify endpoint/model configuration.",
+        ) from exc
 
     raw = response.content.strip()
     if raw.startswith("```"):
