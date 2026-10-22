@@ -22,6 +22,7 @@ async def analyze_security_logs(
     model_id: UUID,
     file_name: str,
     log_content: str,
+    log_type: str = "auto_detect",
 ) -> dict[str, Any]:
     content = log_content.strip()
     if not content:
@@ -44,6 +45,19 @@ async def analyze_security_logs(
     ).scalar_one_or_none()
     if not model:
         raise HTTPException(status_code=404, detail="AI model not found for selected provider")
+
+    log_type_guidance = {
+        "auto_detect": "Infer the log source/type from the supplied content. If uncertain, say so and avoid assuming a platform.",
+        "windows_security": "Focus on Windows Security events, authentication, account changes, logon failures, privilege use, and policy changes.",
+        "windows_system_application": "Focus on Windows System and Application events, service/driver health, application crashes, and security-relevant patterns. Distinguish routine operational errors from threats.",
+        "web_server": "Focus on IIS, Nginx, Apache, HTTP status patterns, suspicious paths, request bursts, web attacks, and access anomalies when supported by evidence.",
+        "firewall_network": "Focus on firewall decisions, connection patterns, scanning, unusual destinations/ports, and network policy events when supported by evidence.",
+        "endpoint_edr": "Focus on endpoint protection, antivirus, EDR alerts, process execution, malware indicators, quarantine, and host activity supported by the logs.",
+        "application_server": "Focus on application/runtime errors, service behavior, authentication, authorization, and suspicious application activity; separate reliability issues from security incidents.",
+        "database": "Focus on database authentication, privilege changes, audit events, unusual queries, access anomalies, and integrity-related events supported by evidence.",
+        "cloud_audit": "Focus on cloud control-plane and identity audit events, sign-in anomalies, permission changes, key/token activity, and resource configuration changes supported by evidence.",
+    }
+    selected_log_guidance = log_type_guidance.get(log_type, log_type_guidance["auto_detect"])
 
     system_prompt = (
         "You are a cautious, evidence-based security log analyst. Analyze only the log evidence supplied by the user. "
@@ -69,6 +83,8 @@ async def analyze_security_logs(
         "may be summarized without being escalated as security findings."
     )
     context = (
+        f"Selected log type: {log_type}\n"
+        f"Analysis focus: {selected_log_guidance}\n"
         f"File name: {file_name}\n"
         f"Log line count: {len(content.splitlines())}\n\n"
         "SEVERITY CALIBRATION FOR WINDOWS EVENTS:\n"
