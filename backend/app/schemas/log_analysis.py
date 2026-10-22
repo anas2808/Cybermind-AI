@@ -8,6 +8,7 @@ class LogAnalysisRequest(BaseModel):
     file_name: str = Field(default="pasted-log.txt", min_length=1, max_length=255)
     log_content: str = Field(min_length=1, max_length=200000)
     log_type: str = Field(default="auto_detect", pattern="^(auto_detect|windows_security|windows_system_application|web_server|firewall_network|endpoint_edr|application_server|database|cloud_audit)$")
+    severity_levels: list[str] = Field(default=["critical", "high", "medium", "low", "info"], min_length=1, max_length=5)
 
 
 class LogFinding(BaseModel):
