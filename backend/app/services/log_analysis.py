@@ -241,12 +241,3 @@ async def analyze_security_logs(
         "lines_analyzed": len(content.splitlines()),
         "limitations": limitations,
     }
-    return {
-        "provider_id": provider.id,
-        "model_id": model.id,
-        "file_name": file_name,
-        "summary": str(payload.get("summary", "")).strip()[:5000],
-        "findings": findings,
-        "lines_analyzed": len(content.splitlines()),
-        "limitations": ["AI-generated analysis can be incorrect or incomplete.", "Validate findings against original logs and related systems.", "Only the submitted log content was analyzed."],
-    }
