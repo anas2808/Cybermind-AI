@@ -128,8 +128,20 @@ async def analyze_security_logs(
         )
     except Exception as exc:
         # Keep provider details in server logs for diagnosis without exposing credentials.
-        logger.exception("AI log analysis provider request failed")
-        status_code = getattr(getattr(exc, "response", None), "status_code", None)
+        provider_response = getattr(exc, "response", None)
+        status_code = getattr(provider_response, "status_code", None)
+        provider_body = ""
+        if provider_response is not None:
+            try:
+                provider_body = provider_response.text[:1500]
+            except Exception:
+                provider_body = ""
+        # Log status and provider response body for diagnosis, never log credentials.
+        logger.exception(
+            "AI log analysis provider request failed (status=%s, body=%s)",
+            status_code,
+            provider_body,
+        )
         if status_code == 429:
             raise HTTPException(
                 status_code=429,
@@ -143,11 +155,11 @@ async def analyze_security_logs(
         if status_code == 400 or status_code == 413:
             raise HTTPException(
                 status_code=502,
-                detail="The AI provider rejected the request. Reduce the selected logs or check the model's input limits.",
+                detail=f"The AI provider rejected the request (provider HTTP {status_code}). This can indicate an unsupported model, input/output token limit, or invalid request options. Provider details are in the backend log.",
             ) from exc
         raise HTTPException(
             status_code=502,
-            detail="The AI provider request failed. Check the backend logs for the provider error and verify endpoint/model configuration.",
+            detail=f"The AI provider request failed (provider HTTP {status_code or 'unknown'}). Provider details are in the backend log; verify endpoint/model configuration and connectivity.",
         ) from exc
 
     raw = response.content.strip()
