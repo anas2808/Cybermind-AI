@@ -26,4 +26,5 @@ async def analyze_logs(
         file_name=request.file_name,
         log_content=request.log_content,
         log_type=request.log_type,
+        severity_levels=request.severity_levels,
     )
