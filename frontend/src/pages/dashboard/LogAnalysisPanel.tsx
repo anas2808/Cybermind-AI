@@ -106,6 +106,7 @@ function OverviewChart({ events }: { events: LogEvent[] }) {
 export function LogAnalysisPanel() {
   const [fileName, setFileName] = useState('')
   const [logType, setLogType] = useState('auto_detect')
+  const [selectedSeverities, setSelectedSeverities] = useState<string[]>(['critical', 'high', 'medium', 'low', 'info'])
   const [rawText, setRawText] = useState('')
   const [query, setQuery] = useState('')
   const [severity, setSeverity] = useState<Severity | 'all'>('all')
@@ -201,7 +202,7 @@ export function LogAnalysisPanel() {
   async function runAiAnalysis() {
     if (!rawText.trim() || !providerId || !modelId) return
     setAiLoading(true); setAiError('')
-    try { setAiResult(await analyzeSecurityLogs(providerId, modelId, fileName || 'pasted-log.txt', rawText, logType)) } catch { setAiError('AI analysis failed. Check provider/model connectivity and the 200,000-character limit.') } finally { setAiLoading(false) }
+    try { setAiResult(await analyzeSecurityLogs(providerId, modelId, fileName || 'pasted-log.txt', rawText, logType, selectedSeverities)) } catch { setAiError('AI analysis failed. Check provider/model connectivity and the 200,000-character limit.') } finally { setAiLoading(false) }
   }
   function downloadReport() {
     const report = ['# CyberMind AI — Security Log Analysis', '', `- File: ${fileName || 'Pasted log text'}`, `- Analyzed: ${new Date().toLocaleString()}`, `- Non-empty log lines: ${events.length}`, '', '## Severity summary', ...severityOrder.map((key) => `- ${severityLabels[key].toUpperCase()}: ${counts[key]}`), '', '## Flagged and observed events', ...events.map((event) => `### Line ${event.line} — ${event.severity.toUpperCase()}\n\n${event.raw}`), '', '> This is a rule-based triage aid, not a confirmed incident determination. Validate findings against source systems and surrounding events.'].join('\n')
@@ -259,8 +260,9 @@ export function LogAnalysisPanel() {
       <section className="log-card log-ai-card">
         <div className="log-card-heading"><div><h3>AI analysis</h3><p>Use a configured provider to explain findings.</p></div><span className="log-step">02 / ANALYZE</span></div>
         <label className="log-toggle"><input type="checkbox" checked={aiEnabled} onChange={(event) => setAiEnabled(event.target.checked)} /><span />Enable AI-assisted investigation</label>
+        <label className="log-field">Severities to investigate<div className="log-severity-options">{[{ value: 'critical', label: 'Critical' }, { value: 'high', label: 'High' }, { value: 'medium', label: 'Medium' }, { value: 'low', label: 'Low' }, { value: 'info', label: 'Informational' }].map((item) => <label key={item.value} className="log-severity-option"><input type="checkbox" checked={selectedSeverities.includes(item.value)} onChange={(event) => { setSelectedSeverities((current) => event.target.checked ? [...current, item.value] : current.filter((value) => value !== item.value)); setAiResult(null) }} disabled={!aiEnabled || aiLoading} />{item.label}</label>)}</div><small>Select one or more severity levels for the AI to prioritize. All are selected by default.</small></label>
         <div className="log-select-grid"><label className="log-field">AI provider<select value={providerId} onChange={(event) => void selectProvider(event.target.value)} disabled={!aiEnabled}><option value="">Select provider</option>{providers.map((provider) => <option key={provider.id} value={provider.id}>{provider.name}</option>)}</select></label><label className="log-field">AI model<select value={modelId} onChange={(event) => { setModelId(event.target.value); setAiResult(null) }} disabled={!aiEnabled || !providerId}><option value="">Select model</option>{models.map((model) => <option key={model.id} value={model.id}>{model.display_name}</option>)}</select></label></div>
-        <button type="button" className="dialog-submit-button log-analyze-button" disabled={!aiEnabled || !rawText.trim() || !providerId || !modelId || aiLoading} onClick={() => void runAiAnalysis()}>{aiLoading ? 'Analyzing with AI…' : 'Analyze logs'}</button>
+        <button type="button" className="dialog-submit-button log-analyze-button" disabled={!aiEnabled || !rawText.trim() || !providerId || !modelId || selectedSeverities.length === 0 || aiLoading} onClick={() => void runAiAnalysis()}>{aiLoading ? 'Analyzing with AI…' : 'Analyze logs'}</button>
         {!providers.length && <p className="project-analysis-hint">Configure and enable a provider and model in Settings → AI Providers.</p>}
         {aiError && <p className="project-form-error" role="alert">{aiError}</p>}
       </section>
