@@ -86,7 +86,7 @@ async def analyze_security_logs(
         "description, why_it_matters, evidence (short exact quote or specific event/line reference), source (only fields present in logs), "
         "timestamp (only if present), related_events (references present in logs), confidence (level plus rationale), recommendation (specific next step), "
         "and follow_up (how to verify or disprove the concern). Keep findings distinct and useful; group repetitive evidence. Provide up to 8 highest-value "
-        "findings, not filler. Recommendations should be deduplicated and ordered by urgency. Timeline items must contain timestamp, event, significance, "
+        "findings, not filler. Keep the response concise to fit the output-token budget. Limit each finding description, why_it_matters, evidence, recommendation, and follow_up to 1-3 short sentences. Provide at most 3 items per recommendation category and at most 8 concise timeline entries. Recommendations should be deduplicated and ordered by urgency. Timeline items must contain timestamp, event, significance, "
         "evidence and use only supplied timestamps. If no meaningful issue is evidenced, return an empty findings array and state that this is not proof "
         "that the system is safe. Ensure JSON strings are properly escaped."
     )
@@ -123,7 +123,8 @@ async def analyze_security_logs(
                 system_prompt=system_prompt,
                 user_prompt="Analyze these logs for security-relevant events. Explain uncertainty and provide actionable defensive recommendations.",
                 context=context,
-                options={},
+                # Explicit budget helps multi-event analyses; the prompt also constrains response size.
+                options={"max_completion_tokens": 8192},
             ),
         )
     except Exception as exc:
@@ -161,6 +162,17 @@ async def analyze_security_logs(
             status_code=502,
             detail=f"The AI provider request failed (provider HTTP {status_code or 'unknown'}). Provider details are in the backend log; verify endpoint/model configuration and connectivity.",
         ) from exc
+
+    if response.finish_reason == "length":
+        logger.warning(
+            "AI log analysis output reached its token limit (model=%s, output_tokens=%s)",
+            model.model_id,
+            response.usage.output_tokens,
+        )
+        raise HTTPException(
+            status_code=502,
+            detail="The AI model reached its output-token limit before completing the analysis. Retry with fewer log entries or select a model with a larger output limit.",
+        )
 
     raw = response.content.strip()
     if raw.startswith("```"):
