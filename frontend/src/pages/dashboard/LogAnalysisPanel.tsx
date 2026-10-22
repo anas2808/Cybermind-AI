@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { WindowsAutomaticTriagePanel } from './WindowsAutomaticTriagePanel'
 import { analyzeSecurityLogs, getAIProviderModels, getAIProviders, type AIModel, type AIProvider, type LogAnalysisResult } from '../../lib/api'
 
 type Severity = 'critical' | 'high' | 'medium' | 'low' | 'info'
@@ -236,8 +235,6 @@ export function LogAnalysisPanel() {
 
   return <section className="log-analysis-panel" aria-labelledby="log-analysis-title">
     <header className="log-dashboard-heading"><div><p className="section-kicker">Security operations · Log triage</p><h2 id="log-analysis-title">Security Log Analysis</h2><p>Upload or paste application, server, authentication, or security logs to surface suspicious events and build a shareable report.</p></div><span className="log-analysis-status"><i /> Rule-based + AI assisted</span></header>
-
-    <WindowsAutomaticTriagePanel />
 
     <section className="log-card log-collector-card" aria-labelledby="windows-collector-title">
       <div className="log-card-heading"><div><h3 id="windows-collector-title">Collect Windows event logs</h3><p>Collect logs on your Windows computer, then import them here for review.</p></div><span className="log-step">QUICK START</span></div>
