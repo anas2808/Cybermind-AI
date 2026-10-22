@@ -290,11 +290,11 @@ export type LogAnalysisResult = {
   timeline?: LogTimelineItem[]
   recommendations?: LogRecommendations
 }
-export async function analyzeSecurityLogs(providerId: string, modelId: string, fileName: string, logContent: string): Promise<LogAnalysisResult> {
+export async function analyzeSecurityLogs(providerId: string, modelId: string, fileName: string, logContent: string, logType = 'auto_detect', severityLevels: string[] = ['critical', 'high', 'medium', 'low', 'info']): Promise<LogAnalysisResult> {
   const response = await authenticatedFetch('/api/security/logs/analyze', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ provider_id: providerId, model_id: modelId, file_name: fileName, log_content: logContent }),
+    body: JSON.stringify({ provider_id: providerId, model_id: modelId, file_name: fileName, log_content: logContent, log_type: logType, severity_levels: severityLevels }),
   })
   return parseResponse<LogAnalysisResult>(response)
 }

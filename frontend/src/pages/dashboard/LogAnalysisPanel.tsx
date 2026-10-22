@@ -105,6 +105,8 @@ function OverviewChart({ events }: { events: LogEvent[] }) {
 
 export function LogAnalysisPanel() {
   const [fileName, setFileName] = useState('')
+  const [logType, setLogType] = useState('auto_detect')
+  const [selectedSeverities, setSelectedSeverities] = useState<string[]>(['critical', 'high', 'medium', 'low', 'info'])
   const [rawText, setRawText] = useState('')
   const [query, setQuery] = useState('')
   const [severity, setSeverity] = useState<Severity | 'all'>('all')
@@ -198,9 +200,51 @@ export function LogAnalysisPanel() {
     try { const nextModels = await getAIProviderModels(id); setModels(nextModels); setModelId(nextModels[0]?.id || '') } catch { setAiError('Could not load models for this provider.') }
   }
   async function runAiAnalysis() {
-    if (!rawText.trim() || !providerId || !modelId) return
-    setAiLoading(true); setAiError('')
-    try { setAiResult(await analyzeSecurityLogs(providerId, modelId, fileName || 'pasted-log.txt', rawText)) } catch { setAiError('AI analysis failed. Check provider/model connectivity and the 200,000-character limit.') } finally { setAiLoading(false) }
+    if (!rawText.trim() || !providerId || !modelId || selectedSeverities.length === 0) return
+
+    // Filter the actual payload before calling the provider; a selector alone does not filter requests.
+    const selectedEvents = events.filter((event) => selectedSeverities.includes(event.severity))
+    if (selectedEvents.length === 0) {
+      setAiError('No log lines matched the selected severity levels. Select another severity or choose all levels.')
+      setAiResult(null)
+      return
+    }
+
+    // Bound requests to reduce token and rate-limit failures on large files.
+    const maxLines = 200
+    const maxCharacters = 30000
+    const chosenEvents = selectedEvents.slice(0, maxLines)
+    let selectedLogText = chosenEvents.map((event) => event.raw).join('\n')
+    const wasCharacterTrimmed = selectedLogText.length > maxCharacters
+    if (wasCharacterTrimmed) selectedLogText = selectedLogText.slice(0, maxCharacters)
+    const wasLineLimited = selectedEvents.length > chosenEvents.length
+    const prefix = [
+      'CyberMind AI severity-filtered log analysis',
+      `Selected severity levels: ${selectedSeverities.join(', ')}`,
+      `Matching events: ${selectedEvents.length}`,
+      wasLineLimited ? `Only the first ${chosenEvents.length} matching events are included due to request limits.` : '',
+      wasCharacterTrimmed ? 'The matching log text was truncated to 30,000 characters.' : '',
+      'Analyze the supplied matching events; do not claim omitted events were reviewed.'
+    ].filter(Boolean).join('\n')
+    const payload = `${prefix}\n\n${selectedLogText}`
+
+    setAiLoading(true); setAiError(''); setAiResult(null)
+    try {
+      setAiResult(await analyzeSecurityLogs(providerId, modelId, fileName || 'pasted-log.txt', payload, logType, selectedSeverities))
+    } catch (error) {
+      const status = typeof error === 'object' && error !== null && 'status' in error ? Number(error.status) : 0
+      if (status === 429) {
+        setAiError('The AI provider rate limit was reached (HTTP 429). Your severity filter is active; wait a little and retry, or choose a provider/model with a higher quota.')
+      } else if (status === 502) {
+        setAiError('The backend could not complete the AI provider request. Check the backend terminal logs for the exact provider error; common causes are model/context limits or provider connectivity.')
+      } else if (status === 401 || status === 403) {
+        setAiError('Authentication was rejected. Check your login session and the AI provider credentials in Settings.')
+      } else {
+        setAiError(`AI analysis failed (HTTP ${status || 'network error'}). The request was filtered to the selected severity events (maximum 200 events / 30,000 log characters). Check the backend terminal for details.`)
+      }
+    } finally {
+      setAiLoading(false)
+    }
   }
   function downloadReport() {
     const report = ['# CyberMind AI — Security Log Analysis', '', `- File: ${fileName || 'Pasted log text'}`, `- Analyzed: ${new Date().toLocaleString()}`, `- Non-empty log lines: ${events.length}`, '', '## Severity summary', ...severityOrder.map((key) => `- ${severityLabels[key].toUpperCase()}: ${counts[key]}`), '', '## Flagged and observed events', ...events.map((event) => `### Line ${event.line} — ${event.severity.toUpperCase()}\n\n${event.raw}`), '', '> This is a rule-based triage aid, not a confirmed incident determination. Validate findings against source systems and surrounding events.'].join('\n')
@@ -250,6 +294,7 @@ export function LogAnalysisPanel() {
       <section className="log-card log-input-card">
         <div className="log-card-heading"><div><h3>Log input</h3><p>Provide the source data for analysis.</p></div><span className="log-step">01 / INPUT</span></div>
         <div className="log-tabs" role="tablist"><button type="button" className={activeTab === 'paste' ? 'active' : ''} onClick={() => setActiveTab('paste')}>Paste logs</button><button type="button" className={activeTab === 'upload' ? 'active' : ''} onClick={() => setActiveTab('upload')}>Upload file</button></div>
+        <label className="log-field">Log type to analyze<select value={logType} onChange={(event) => setLogType(event.target.value)}><option value="auto_detect">Auto-detect from log content</option><option value="windows_security">Windows Security / authentication events</option><option value="windows_system_application">Windows System and Application events</option><option value="web_server">Web server logs (IIS, Nginx, Apache)</option><option value="firewall_network">Firewall and network logs</option><option value="endpoint_edr">Endpoint / antivirus / EDR alerts</option><option value="application_server">Application and server logs</option><option value="database">Database audit and error logs</option><option value="cloud_audit">Cloud and identity audit logs</option></select></label>
         {activeTab === 'paste' ? <label className="log-field">Log content<textarea value={rawText} onChange={(event) => replaceText(event.target.value, 'Pasted log text')} rows={8} placeholder={'2026-08-12T10:15:22Z ERROR Failed login for user admin from 203.0.113.10\n2026-08-12T10:16:01Z WARN Rate limit exceeded for client'} /></label> : <button type="button" className="log-dropzone" onClick={() => fileInputRef.current?.click()} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); void loadFile(event.dataTransfer.files[0]) }}><span className="log-upload-icon">↑</span><strong>{fileName || 'Drop a log file here'}</strong><small>or choose a .log, .txt, .csv, or Windows event .json file</small><input ref={fileInputRef} type="file" accept=".log,.txt,.csv,.json,text/plain,text/csv,application/json" onChange={(event) => void loadFile(event.target.files?.[0])} /></button>}
         {fileName && <p className="log-file-name">Selected: <strong>{fileName}</strong> · {total} non-empty lines</p>}
         {error && <p className="project-form-error" role="alert">{error}</p>}
@@ -257,8 +302,9 @@ export function LogAnalysisPanel() {
       <section className="log-card log-ai-card">
         <div className="log-card-heading"><div><h3>AI analysis</h3><p>Use a configured provider to explain findings.</p></div><span className="log-step">02 / ANALYZE</span></div>
         <label className="log-toggle"><input type="checkbox" checked={aiEnabled} onChange={(event) => setAiEnabled(event.target.checked)} /><span />Enable AI-assisted investigation</label>
+        <label className="log-field">Severities to investigate<div className="log-severity-options">{[{ value: 'critical', label: 'Critical' }, { value: 'high', label: 'High' }, { value: 'medium', label: 'Medium' }, { value: 'low', label: 'Low' }, { value: 'info', label: 'Informational' }].map((item) => <label key={item.value} className="log-severity-option"><input type="checkbox" checked={selectedSeverities.includes(item.value)} onChange={(event) => { setSelectedSeverities((current) => event.target.checked ? [...current, item.value] : current.filter((value) => value !== item.value)); setAiResult(null) }} disabled={!aiEnabled || aiLoading} />{item.label}</label>)}</div><small>Select one or more severity levels for the AI to prioritize. All are selected by default.</small></label>
         <div className="log-select-grid"><label className="log-field">AI provider<select value={providerId} onChange={(event) => void selectProvider(event.target.value)} disabled={!aiEnabled}><option value="">Select provider</option>{providers.map((provider) => <option key={provider.id} value={provider.id}>{provider.name}</option>)}</select></label><label className="log-field">AI model<select value={modelId} onChange={(event) => { setModelId(event.target.value); setAiResult(null) }} disabled={!aiEnabled || !providerId}><option value="">Select model</option>{models.map((model) => <option key={model.id} value={model.id}>{model.display_name}</option>)}</select></label></div>
-        <button type="button" className="dialog-submit-button log-analyze-button" disabled={!aiEnabled || !rawText.trim() || !providerId || !modelId || aiLoading} onClick={() => void runAiAnalysis()}>{aiLoading ? 'Analyzing with AI…' : 'Analyze logs'}</button>
+        <button type="button" className="dialog-submit-button log-analyze-button" disabled={!aiEnabled || !rawText.trim() || !providerId || !modelId || selectedSeverities.length === 0 || aiLoading} onClick={() => void runAiAnalysis()}>{aiLoading ? 'Analyzing with AI…' : 'Analyze logs'}</button>
         {!providers.length && <p className="project-analysis-hint">Configure and enable a provider and model in Settings → AI Providers.</p>}
         {aiError && <p className="project-form-error" role="alert">{aiError}</p>}
       </section>
