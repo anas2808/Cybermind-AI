@@ -105,6 +105,7 @@ function OverviewChart({ events }: { events: LogEvent[] }) {
 
 export function LogAnalysisPanel() {
   const [fileName, setFileName] = useState('')
+  const [logType, setLogType] = useState('auto_detect')
   const [rawText, setRawText] = useState('')
   const [query, setQuery] = useState('')
   const [severity, setSeverity] = useState<Severity | 'all'>('all')
@@ -200,7 +201,7 @@ export function LogAnalysisPanel() {
   async function runAiAnalysis() {
     if (!rawText.trim() || !providerId || !modelId) return
     setAiLoading(true); setAiError('')
-    try { setAiResult(await analyzeSecurityLogs(providerId, modelId, fileName || 'pasted-log.txt', rawText)) } catch { setAiError('AI analysis failed. Check provider/model connectivity and the 200,000-character limit.') } finally { setAiLoading(false) }
+    try { setAiResult(await analyzeSecurityLogs(providerId, modelId, fileName || 'pasted-log.txt', rawText, logType)) } catch { setAiError('AI analysis failed. Check provider/model connectivity and the 200,000-character limit.') } finally { setAiLoading(false) }
   }
   function downloadReport() {
     const report = ['# CyberMind AI — Security Log Analysis', '', `- File: ${fileName || 'Pasted log text'}`, `- Analyzed: ${new Date().toLocaleString()}`, `- Non-empty log lines: ${events.length}`, '', '## Severity summary', ...severityOrder.map((key) => `- ${severityLabels[key].toUpperCase()}: ${counts[key]}`), '', '## Flagged and observed events', ...events.map((event) => `### Line ${event.line} — ${event.severity.toUpperCase()}\n\n${event.raw}`), '', '> This is a rule-based triage aid, not a confirmed incident determination. Validate findings against source systems and surrounding events.'].join('\n')
@@ -250,6 +251,7 @@ export function LogAnalysisPanel() {
       <section className="log-card log-input-card">
         <div className="log-card-heading"><div><h3>Log input</h3><p>Provide the source data for analysis.</p></div><span className="log-step">01 / INPUT</span></div>
         <div className="log-tabs" role="tablist"><button type="button" className={activeTab === 'paste' ? 'active' : ''} onClick={() => setActiveTab('paste')}>Paste logs</button><button type="button" className={activeTab === 'upload' ? 'active' : ''} onClick={() => setActiveTab('upload')}>Upload file</button></div>
+        <label className="log-field">Log type to analyze<select value={logType} onChange={(event) => setLogType(event.target.value)}><option value="auto_detect">Auto-detect from log content</option><option value="windows_security">Windows Security / authentication events</option><option value="windows_system_application">Windows System and Application events</option><option value="web_server">Web server logs (IIS, Nginx, Apache)</option><option value="firewall_network">Firewall and network logs</option><option value="endpoint_edr">Endpoint / antivirus / EDR alerts</option><option value="application_server">Application and server logs</option><option value="database">Database audit and error logs</option><option value="cloud_audit">Cloud and identity audit logs</option></select></label>
         {activeTab === 'paste' ? <label className="log-field">Log content<textarea value={rawText} onChange={(event) => replaceText(event.target.value, 'Pasted log text')} rows={8} placeholder={'2026-08-12T10:15:22Z ERROR Failed login for user admin from 203.0.113.10\n2026-08-12T10:16:01Z WARN Rate limit exceeded for client'} /></label> : <button type="button" className="log-dropzone" onClick={() => fileInputRef.current?.click()} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); void loadFile(event.dataTransfer.files[0]) }}><span className="log-upload-icon">↑</span><strong>{fileName || 'Drop a log file here'}</strong><small>or choose a .log, .txt, .csv, or Windows event .json file</small><input ref={fileInputRef} type="file" accept=".log,.txt,.csv,.json,text/plain,text/csv,application/json" onChange={(event) => void loadFile(event.target.files?.[0])} /></button>}
         {fileName && <p className="log-file-name">Selected: <strong>{fileName}</strong> · {total} non-empty lines</p>}
         {error && <p className="project-form-error" role="alert">{error}</p>}
