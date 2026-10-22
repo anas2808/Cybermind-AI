@@ -23,6 +23,7 @@ async def analyze_security_logs(
     file_name: str,
     log_content: str,
     log_type: str = "auto_detect",
+    severity_levels: list[str] | None = None,
 ) -> dict[str, Any]:
     content = log_content.strip()
     if not content:
@@ -58,6 +59,9 @@ async def analyze_security_logs(
         "cloud_audit": "Focus on cloud control-plane and identity audit events, sign-in anomalies, permission changes, key/token activity, and resource configuration changes supported by evidence.",
     }
     selected_log_guidance = log_type_guidance.get(log_type, log_type_guidance["auto_detect"])
+    severity_labels = {"critical": "Critical", "high": "High", "medium": "Medium", "low": "Low", "info": "Informational"}
+    selected_severities = severity_levels or ["critical", "high", "medium", "low", "info"]
+    selected_severity_guidance = ", ".join(severity_labels.get(level, level) for level in selected_severities)
 
     system_prompt = (
         "You are a cautious, evidence-based security log analyst. Analyze only the log evidence supplied by the user. "
@@ -84,7 +88,8 @@ async def analyze_security_logs(
     )
     context = (
         f"Selected log type: {log_type}\n"
-        f"Analysis focus: {selected_log_guidance}\n"
+        f"Analysis focus: {selected_log_guidance}\n"        f"Severity levels selected by the user for focused investigation: {selected_severity_guidance}. Prioritize findings at these levels, but retain surrounding log lines as context and mention other clearly important evidence if found. Do not assume a log line severity label alone proves a security incident.\n"
+
         f"File name: {file_name}\n"
         f"Log line count: {len(content.splitlines())}\n\n"
         "SEVERITY CALIBRATION FOR WINDOWS EVENTS:\n"
