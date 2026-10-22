@@ -231,8 +231,17 @@ export function LogAnalysisPanel() {
     setAiLoading(true); setAiError(''); setAiResult(null)
     try {
       setAiResult(await analyzeSecurityLogs(providerId, modelId, fileName || 'pasted-log.txt', payload, logType, selectedSeverities))
-    } catch {
-      setAiError('AI analysis failed. The request was filtered to selected severity events (maximum 200 events / 30,000 log characters). Check provider rate limits/connectivity or select fewer severity levels.')
+    } catch (error) {
+      const status = typeof error === 'object' && error !== null && 'status' in error ? Number(error.status) : 0
+      if (status === 429) {
+        setAiError('The AI provider rate limit was reached (HTTP 429). Your severity filter is active; wait a little and retry, or choose a provider/model with a higher quota.')
+      } else if (status === 502) {
+        setAiError('The backend could not complete the AI provider request. Check the backend terminal logs for the exact provider error; common causes are model/context limits or provider connectivity.')
+      } else if (status === 401 || status === 403) {
+        setAiError('Authentication was rejected. Check your login session and the AI provider credentials in Settings.')
+      } else {
+        setAiError(`AI analysis failed (HTTP ${status || 'network error'}). The request was filtered to the selected severity events (maximum 200 events / 30,000 log characters). Check the backend terminal for details.`)
+      }
     } finally {
       setAiLoading(false)
     }
