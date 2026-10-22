@@ -25,4 +25,5 @@ async def analyze_logs(
         model_id=request.model_id,
         file_name=request.file_name,
         log_content=request.log_content,
+        log_type=request.log_type,
     )
