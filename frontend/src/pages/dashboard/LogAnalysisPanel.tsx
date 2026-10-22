@@ -200,9 +200,42 @@ export function LogAnalysisPanel() {
     try { const nextModels = await getAIProviderModels(id); setModels(nextModels); setModelId(nextModels[0]?.id || '') } catch { setAiError('Could not load models for this provider.') }
   }
   async function runAiAnalysis() {
-    if (!rawText.trim() || !providerId || !modelId) return
-    setAiLoading(true); setAiError('')
-    try { setAiResult(await analyzeSecurityLogs(providerId, modelId, fileName || 'pasted-log.txt', rawText, logType, selectedSeverities)) } catch { setAiError('AI analysis failed. Check provider/model connectivity and the 200,000-character limit.') } finally { setAiLoading(false) }
+    if (!rawText.trim() || !providerId || !modelId || selectedSeverities.length === 0) return
+
+    // Filter the actual payload before calling the provider; a selector alone does not filter requests.
+    const selectedEvents = events.filter((event) => selectedSeverities.includes(event.severity))
+    if (selectedEvents.length === 0) {
+      setAiError('No log lines matched the selected severity levels. Select another severity or choose all levels.')
+      setAiResult(null)
+      return
+    }
+
+    // Bound requests to reduce token and rate-limit failures on large files.
+    const maxLines = 200
+    const maxCharacters = 30000
+    const chosenEvents = selectedEvents.slice(0, maxLines)
+    let selectedLogText = chosenEvents.map((event) => event.raw).join('\n')
+    const wasCharacterTrimmed = selectedLogText.length > maxCharacters
+    if (wasCharacterTrimmed) selectedLogText = selectedLogText.slice(0, maxCharacters)
+    const wasLineLimited = selectedEvents.length > chosenEvents.length
+    const prefix = [
+      'CyberMind AI severity-filtered log analysis',
+      `Selected severity levels: ${selectedSeverities.join(', ')}`,
+      `Matching events: ${selectedEvents.length}`,
+      wasLineLimited ? `Only the first ${chosenEvents.length} matching events are included due to request limits.` : '',
+      wasCharacterTrimmed ? 'The matching log text was truncated to 30,000 characters.' : '',
+      'Analyze the supplied matching events; do not claim omitted events were reviewed.'
+    ].filter(Boolean).join('\n')
+    const payload = `${prefix}\n\n${selectedLogText}`
+
+    setAiLoading(true); setAiError(''); setAiResult(null)
+    try {
+      setAiResult(await analyzeSecurityLogs(providerId, modelId, fileName || 'pasted-log.txt', payload, logType, selectedSeverities))
+    } catch {
+      setAiError('AI analysis failed. The request was filtered to selected severity events (maximum 200 events / 30,000 log characters). Check provider rate limits/connectivity or select fewer severity levels.')
+    } finally {
+      setAiLoading(false)
+    }
   }
   function downloadReport() {
     const report = ['# CyberMind AI — Security Log Analysis', '', `- File: ${fileName || 'Pasted log text'}`, `- Analyzed: ${new Date().toLocaleString()}`, `- Non-empty log lines: ${events.length}`, '', '## Severity summary', ...severityOrder.map((key) => `- ${severityLabels[key].toUpperCase()}: ${counts[key]}`), '', '## Flagged and observed events', ...events.map((event) => `### Line ${event.line} — ${event.severity.toUpperCase()}\n\n${event.raw}`), '', '> This is a rule-based triage aid, not a confirmed incident determination. Validate findings against source systems and surrounding events.'].join('\n')
