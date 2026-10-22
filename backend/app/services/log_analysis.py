@@ -169,12 +169,27 @@ async def analyze_security_logs(
             raw = raw[:-3].rstrip()
     try:
         payload = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        raise HTTPException(status_code=502, detail="AI returned an invalid log analysis response") from exc
+        if not isinstance(payload, dict):
+            raise ValueError("Top-level AI response must be a JSON object")
+    except (json.JSONDecodeError, ValueError) as exc:
+        logger.warning(
+            "AI log analysis response could not be parsed as JSON (model=%s, finish_reason=%s, response_preview=%r)",
+            model.model_id,
+            response.finish_reason,
+            raw[:1200],
+        )
+        raise HTTPException(
+            status_code=502,
+            detail="The AI provider responded, but its output was not valid structured JSON. Retry once; if it repeats, use a model with reliable JSON output or reduce the log batch.",
+        ) from exc
 
     allowed = {"critical", "high", "medium", "low", "informational"}
+    raw_findings = payload.get("findings", [])
+    if not isinstance(raw_findings, list):
+        logger.warning("AI log analysis returned non-list findings (model=%s, type=%s)", model.model_id, type(raw_findings).__name__)
+        raw_findings = []
     findings = []
-    for item in payload.get("findings", []):
+    for item in raw_findings:
         if not isinstance(item, dict):
             continue
         severity = str(item.get("severity", "informational")).lower()
