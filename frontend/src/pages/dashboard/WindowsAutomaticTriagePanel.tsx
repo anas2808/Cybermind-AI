@@ -60,7 +60,7 @@ function classify(events: WindowsEvent[]): Pick<EventGroup, 'priority' | 'title'
 function triage(events: WindowsEvent[]): EventGroup[] {
   const groups = new Map<string, WindowsEvent[]>()
   for (const event of events) {
-    const key = JSON.stringify([event.log_name || '', event.provider || '', event.event_id ?? '', normalizeMessage(event.message)])
+    const key = JSON.stringify([event.log_name || '', event.provider || '', String(event.event_id ?? ''), normalizeMessage(event.message)])
     groups.set(key, [...(groups.get(key) || []), event])
   }
   const rank: Record<Priority, number> = { HIGH: 0, MEDIUM: 1, LOW: 2, INFORMATIONAL: 3 }
