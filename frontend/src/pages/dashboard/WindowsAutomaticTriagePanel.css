@@ -33,3 +33,11 @@
 .windows-triage-warning { margin:.75rem 0; padding:.75rem 1rem; border-radius:8px; background:#fff7ed; color:#9a3412; font-size:.85rem; }
 .windows-triage-disclaimer { margin-top:1rem; color:var(--text-secondary, #64748b); font-size:.78rem; line-height:1.5; }
 @media(max-width:700px) { .windows-triage-intro { align-items:stretch; flex-direction:column; } .windows-triage-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); } .windows-triage-tools { grid-template-columns:1fr; } .windows-triage-result dl { grid-template-columns:1fr; gap:.2rem; } .windows-triage-result dd { margin-bottom:.5rem; } }
+
+.windows-triage-run { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin:1rem 0; padding:1.1rem; border:1px solid var(--border-color, #cbd5e1); border-radius:12px; background:var(--surface-subtle, #f8fafc); }
+.windows-triage-run p { margin:.35rem 0 0; color:var(--text-secondary, #64748b); font-size:.88rem; }
+.windows-triage-analyze-button { flex-shrink:0; padding:.75rem 1.05rem; border:0; border-radius:8px; background:var(--primary, #145da0); color:white; font-weight:700; cursor:pointer; }
+.windows-triage-analyze-button:hover { filter:brightness(.94); }
+.windows-triage-complete { display:flex; flex-wrap:wrap; align-items:center; gap:.65rem; margin:1rem 0; }
+.windows-triage-complete span { flex:1; min-width:200px; color:var(--text-secondary, #64748b); font-size:.86rem; font-weight:650; }
+@media(max-width:700px) { .windows-triage-run { align-items:stretch; flex-direction:column; } }
