@@ -119,7 +119,8 @@ export function WindowsAutomaticTriagePanel() {
   const [priorityFilter, setPriorityFilter] = useState<Priority | 'ALL'>('ALL')
   const [search, setSearch] = useState('')
   const [busy, setBusy] = useState(false)
-  const groups = useMemo(() => data ? triage(data.events) : [], [data])
+  const [analysisComplete, setAnalysisComplete] = useState(false)
+  const groups = useMemo(() => data && analysisComplete ? triage(data.events) : [], [data, analysisComplete])
   const visibleGroups = useMemo(() => groups.filter((group) =>
     (priorityFilter === 'ALL' || group.priority === priorityFilter) &&
     (!search.trim() || [group.title, group.message, group.provider, group.eventId, group.logName].join(' ').toLowerCase().includes(search.trim().toLowerCase()))
@@ -139,11 +140,13 @@ export function WindowsAutomaticTriagePanel() {
       const exportData = parsed as WindowsExport
       if (!exportData.events.every((event) => event && typeof event === 'object')) throw new Error('The events array contains an invalid event.')
       setData(exportData)
+      setAnalysisComplete(false)
       setFileName(file.name)
       setPriorityFilter('ALL')
       setSearch('')
     } catch (cause) {
       setData(null)
+      setAnalysisComplete(false)
       setFileName('')
       setError(cause instanceof Error ? cause.message : 'Could not read this JSON export.')
     } finally {
@@ -165,7 +168,9 @@ export function WindowsAutomaticTriagePanel() {
     </div>
     {error && <p className="project-form-error" role="alert">{error}</p>}
     {data && <>
-      <div className="windows-triage-file"><strong>{fileName}</strong><span>{data.computer_name || 'Unknown computer'} · {data.event_count ?? data.events.length} raw events · {groups.length} event groups</span><button type="button" className="log-secondary-button" onClick={() => downloadReport('cybermind-windows-triage-report.md', reportText(data, groups))}>Download Markdown report</button></div>
+      <div className="windows-triage-file"><strong>{fileName}</strong><span>{data.computer_name || 'Unknown computer'} · {data.event_count ?? data.events.length} raw events</span></div>
+      {!analysisComplete ? <div className="windows-triage-run"><div><strong>Export ready for analysis</strong><p>Your log file is loaded. Run automatic triage to group events, assign review priorities, and generate a report.</p></div><button type="button" className="windows-triage-analyze-button" onClick={() => { setPriorityFilter('ALL'); setSearch(''); setAnalysisComplete(true) }}>Analyze logs automatically</button></div> : <div className="windows-triage-complete"><span>Automatic triage complete · {groups.length} event groups reviewed</span><button type="button" className="log-secondary-button" onClick={() => downloadReport('cybermind-windows-triage-report.md', reportText(data, groups))}>Download Markdown report</button><button type="button" className="log-secondary-button" onClick={() => setAnalysisComplete(false)}>Run again</button></div>}
+      {analysisComplete && <>
       <div className="windows-triage-metrics">
         {priorities.map((priority) => <button type="button" key={priority} className={'windows-triage-metric priority-' + priority.toLowerCase() + (priorityFilter === priority ? ' selected' : '')} onClick={() => setPriorityFilter(priorityFilter === priority ? 'ALL' : priority)} aria-pressed={priorityFilter === priority}><span>{priority}</span><strong>{counts[priority]}</strong><small>event groups</small></button>)}
       </div>
@@ -180,6 +185,7 @@ export function WindowsAutomaticTriagePanel() {
         {!visibleGroups.length && <p className="log-empty">No event groups match this search and priority.</p>}
       </div>
       <p className="windows-triage-disclaimer">This is rule-based triage, not proof of compromise. The browser processes the selected export locally; no AI request is made by this feature. Validate important findings against Event Viewer and surrounding events.</p>
+      </>}
     </>}
   </section>
 }
