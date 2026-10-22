@@ -168,13 +168,79 @@ async def analyze_security_logs(
         severity = str(item.get("severity", "informational")).lower()
         if severity not in allowed:
             severity = "informational"
+        related_events = item.get("related_events", [])
+        if not isinstance(related_events, list):
+            related_events = []
+        confidence = item.get("confidence", "")
+        if isinstance(confidence, dict):
+            confidence = json.dumps(confidence, ensure_ascii=False)
         findings.append({
             "title": str(item.get("title", "Security observation")).strip()[:300],
             "severity": severity,
             "description": str(item.get("description", "")).strip()[:4000],
+            "why_it_matters": str(item.get("why_it_matters", "")).strip()[:3000],
             "evidence": str(item.get("evidence", "")).strip()[:4000],
+            "source": str(item.get("source", "")).strip()[:1000],
+            "timestamp": str(item.get("timestamp", "")).strip()[:200] or None,
+            "related_events": [str(value)[:300] for value in related_events[:20]],
+            "confidence": str(confidence).strip()[:1000],
             "recommendation": str(item.get("recommendation", "")).strip()[:4000],
+            "follow_up": str(item.get("follow_up", "")).strip()[:3000],
         })
+
+    recommendations = payload.get("recommendations", {})
+    if not isinstance(recommendations, dict):
+        recommendations = {}
+    def clean_recommendations(key: str) -> list[str]:
+        values = recommendations.get(key, [])
+        if not isinstance(values, list):
+            return []
+        return list(dict.fromkeys(str(value).strip()[:1500] for value in values if str(value).strip()))[:10]
+
+    timeline = payload.get("timeline", [])
+    if not isinstance(timeline, list):
+        timeline = []
+    clean_timeline = []
+    for item in timeline[:30]:
+        if not isinstance(item, dict):
+            continue
+        clean_timeline.append({
+            "timestamp": str(item.get("timestamp", "")).strip()[:200],
+            "event": str(item.get("event", "")).strip()[:1000],
+            "significance": str(item.get("significance", "")).strip()[:2000],
+            "evidence": str(item.get("evidence", "")).strip()[:2000],
+        })
+
+    assessment = str(payload.get("assessment", "uncertain")).lower()
+    if assessment not in {"no_clear_threat", "needs_investigation", "likely_security_incident", "uncertain"}:
+        assessment = "uncertain"
+    limitations = payload.get("limitations", [])
+    if not isinstance(limitations, list):
+        limitations = []
+    limitations = [str(value).strip()[:1000] for value in limitations if str(value).strip()][:10]
+    if not limitations:
+        limitations = [
+            "AI-generated analysis can be incorrect or incomplete.",
+            "Validate findings against original logs and related systems.",
+            "Only the submitted, severity-filtered log content was analyzed.",
+        ]
+    return {
+        "provider_id": provider.id,
+        "model_id": model.id,
+        "file_name": file_name,
+        "summary": str(payload.get("summary", "")).strip()[:5000],
+        "assessment": assessment,
+        "time_range": str(payload.get("time_range", "")).strip()[:300] or None,
+        "findings": findings,
+        "recommendations": {
+            "immediate": clean_recommendations("immediate"),
+            "short_term": clean_recommendations("short_term"),
+            "preventive": clean_recommendations("preventive"),
+        },
+        "timeline": clean_timeline,
+        "lines_analyzed": len(content.splitlines()),
+        "limitations": limitations,
+    }
     return {
         "provider_id": provider.id,
         "model_id": model.id,
