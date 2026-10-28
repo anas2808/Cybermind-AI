@@ -16,10 +16,10 @@ Updated on `feature/code-reviewer`. Runtime verification and integration tests s
 ## Prompt and output optimization
 - Treats source code and comments as untrusted data, never instructions.
 - Requests compact JSON only and explicitly forbids chain-of-thought and Markdown wrappers.
-- Caps output at 12 findings, 5 improvement bullets, and 3 limitations to reduce unnecessary output tokens.
+- Caps output at 12 findings, 5 improvement bullets, and 3 limitations to reduce unnecessary output tokens; the backend enforces the 12-finding limit even if a model ignores the prompt.
 - Requests exact 1-based source line numbers and short evidence excerpts; the backend discards out-of-range lines and lines whose evidence does not match the indicated source line.
 - Requires calibrated severity and non-duplicate, actionable findings.
-- Requests complete replacement code only when the model can make a meaningful change without inventing missing project context; otherwise `improved_code` is null.
+- Requests complete replacement code only when the model can make a meaningful change without inventing missing project context; otherwise `improved_code` is null and the backend clears the improvement summary. The prompt explicitly checks imports, types/encodings, exception paths, resource cleanup, meaningful validation, placeholders, and platform-specific behavior.
 - Bounds returned text fields and rejects oversized improved-code output.
 
 ## Boundaries
