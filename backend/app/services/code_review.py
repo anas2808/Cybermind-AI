@@ -165,7 +165,7 @@ JSON escaping must be valid. Do not include the original source in the summary o
             limitations.append("Improved code was omitted because the model response exceeded the output size limit.")
 
     improvements_summary = payload.get("improvements_summary", [])
-    if not isinstance(improvements_summary, list):
+    if not isinstance(improvements_summary, list) or improved_code is None:
         improvements_summary = []
     return {
         "provider_id": provider.id,
