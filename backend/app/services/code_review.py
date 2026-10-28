@@ -169,10 +169,11 @@ JSON escaping must be valid. Do not include the original source in the summary o
         if len(improved_code) > 80000:
             improved_code = None
             limitations.append("Improved code was omitted because the model response exceeded the output size limit.")
-        elif not _replacement_is_valid(improved_code, language):
+        elif not _replacement_is_valid(improved_code, language, source_code=code):
             improved_code = None
-            limitations.append(
-                "Improved code was omitted because it failed basic syntax validation for the declared language."
+            limitations.insert(
+                0,
+                "Improved code was omitted because deterministic syntax or safety checks detected an invalid or unsafe pattern."
             )
 
     improvements_summary = payload.get("improvements_summary", [])
@@ -201,17 +202,92 @@ JSON escaping must be valid. Do not include the original source in the summary o
     }
 
 
-def _replacement_is_valid(code: str, language: str) -> bool:
-    """Apply safe, deterministic checks without executing model-generated code."""
+def _replacement_is_valid(
+    code: str,
+    language: str,
+    source_code: str = "",
+) -> bool:
+    """Apply conservative syntax and security checks without executing generated code."""
     if not code.strip() or "\x00" in code:
         return False
+
     normalized_language = language.strip().lower()
-    if normalized_language in {"python", "py"}:
-        try:
-            ast.parse(code)
-        except (SyntaxError, ValueError, TypeError, MemoryError, RecursionError):
-            return False
-    return True
+    python_language = normalized_language in {"python", "py"}
+    if normalized_language in {"", "auto", "auto-detect", "autodetect"}:
+        # Infer Python only when the supplied source or replacement has clear Python syntax.
+        combined = f"{source_code}\n{code}"
+        python_language = any(
+            marker in combined
+            for marker in ("def ", "class ", "import ", "from ")
+        ) and not combined.lstrip().startswith(("<html", "<?xml"))
+
+    if not python_language:
+        return True
+
+    try:
+        tree = ast.parse(code)
+    except (SyntaxError, ValueError, TypeError, MemoryError, RecursionError):
+        return False
+
+    password_terms = ("password", "passwd", "credential", "authenticate", "login", "auth")
+    weak_hashes = {"md5", "sha1", "sha224", "sha256", "sha384", "sha512"}
+    dangerous_subprocess_calls = {"run", "call", "Popen", "check_call", "check_output"}
+
+    class SafetyVisitor(ast.NodeVisitor):
+        def __init__(self) -> None:
+            self.function_stack: list[str] = []
+            self.unsafe = False
+
+        def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+            self.function_stack.append(node.name.lower())
+            self.generic_visit(node)
+            self.function_stack.pop()
+
+        def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+            self.function_stack.append(node.name.lower())
+            self.generic_visit(node)
+            self.function_stack.pop()
+
+        def visit_Call(self, node: ast.Call) -> None:
+            func = node.func
+            if (
+                isinstance(func, ast.Attribute)
+                and isinstance(func.value, ast.Name)
+                and func.value.id == "hashlib"
+                and func.attr == "compare_digest"
+            ):
+                # compare_digest belongs to hmac/secrets, not hashlib.
+                self.unsafe = True
+
+            if (
+                isinstance(func, ast.Attribute)
+                and isinstance(func.value, ast.Name)
+                and func.value.id == "hashlib"
+                and func.attr in weak_hashes
+                and any(term in name for name in self.function_stack for term in password_terms)
+            ):
+                # General-purpose hashes are not suitable password-storage functions.
+                self.unsafe = True
+
+            if (
+                isinstance(func, ast.Attribute)
+                and isinstance(func.value, ast.Name)
+                and func.value.id == "subprocess"
+                and func.attr in dangerous_subprocess_calls
+                and any(
+                    keyword.arg == "shell"
+                    and isinstance(keyword.value, ast.Constant)
+                    and keyword.value.value is True
+                    for keyword in node.keywords
+                )
+            ):
+                self.unsafe = True
+
+            self.generic_visit(node)
+
+    visitor = SafetyVisitor()
+    visitor.visit(tree)
+    return not visitor.unsafe
 
 
 def _parse_json(content: str) -> dict[str, Any]:
