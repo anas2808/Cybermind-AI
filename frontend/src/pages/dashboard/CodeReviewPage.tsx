@@ -29,6 +29,7 @@ export function CodeReviewPage() {
   const [loadingProviders, setLoadingProviders] = useState(true)
   const [reviewing, setReviewing] = useState(false)
   const [error, setError] = useState('')
+  const [copyMessage, setCopyMessage] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -78,6 +79,7 @@ export function CodeReviewPage() {
     if (!providerId || !modelId || !code.trim() || focus.length === 0) return
     setReviewing(true)
     setError('')
+    setCopyMessage('')
     setResult(null)
     try {
       setResult(await reviewCode(providerId, modelId, language, code, focus))
@@ -103,13 +105,23 @@ export function CodeReviewPage() {
     URL.revokeObjectURL(url)
   }
 
+  async function copyImprovedCode() {
+    if (!result?.improved_code) return
+    try {
+      await navigator.clipboard.writeText(result.improved_code)
+      setCopyMessage('Improved code copied to clipboard.')
+    } catch {
+      setCopyMessage('Clipboard access failed. Select and copy the code manually.')
+    }
+  }
+
   return (
     <div className="code-review-page">
       <header className="code-review-header">
         <div>
           <p className="section-kicker">Security analyst / source inspection</p>
           <h2>Code Reviewer</h2>
-          <p>Find evidence-backed security concerns, correctness bugs, quality risks, and performance issues.</p>
+          <p>Find evidence-backed issues and receive an improved version of your code with concise explanations.</p>
         </div>
         <span className="code-review-privacy">Manual review · No code is sent until you click Review code</span>
       </header>
@@ -155,7 +167,7 @@ export function CodeReviewPage() {
           className="code-review-source"
           value={code}
           onChange={(event) => { setCode(event.target.value); setResult(null) }}
-          placeholder={'Paste a function, file, or focused code snippet here…'}
+          placeholder="Paste a function, file, or focused code snippet here…"
           maxLength={60000}
           spellCheck={false}
           rows={16}
@@ -163,7 +175,7 @@ export function CodeReviewPage() {
         <div className="code-review-input-footer">
           <span>{code.length.toLocaleString()} / 60,000 characters · Paste only code you are permitted to share with the selected AI provider.</span>
           <button type="button" className="dialog-submit-button" disabled={reviewing || !providerId || !modelId || !code.trim() || focus.length === 0} onClick={() => void handleReview()}>
-            {reviewing ? 'Reviewing code…' : 'Review code'}
+            {reviewing ? 'Reviewing and improving…' : 'Review & improve code'}
           </button>
         </div>
         {loadingProviders && <p className="project-analysis-hint">Loading configured AI providers…</p>}
@@ -182,6 +194,25 @@ export function CodeReviewPage() {
             <div><strong>{result.findings.filter((item) => item.severity === 'critical' || item.severity === 'high').length}</strong><span>High priority</span></div>
             <div><strong>{result.language}</strong><span>Language</span></div>
           </div>
+
+          {result.improved_code && (
+            <section className="code-review-improved">
+              <div className="project-analysis-heading">
+                <div><p className="section-kicker">AI-generated revision</p><h3>Improved code</h3></div>
+                <button type="button" className="dialog-submit-button" onClick={() => void copyImprovedCode()}>Copy improved code</button>
+              </div>
+              <p className="code-review-improved-note">Review this revision before using it. The model has not executed or tested the code.</p>
+              {result.improvements_summary.length > 0 && (
+                <ul className="code-review-improvement-list">
+                  {result.improvements_summary.map((item, index) => <li key={index}>{item}</li>)}
+                </ul>
+              )}
+              <pre className="code-review-improved-source"><code>{result.improved_code}</code></pre>
+              {copyMessage && <p className="project-analysis-hint" role="status">{copyMessage}</p>}
+            </section>
+          )}
+          {!result.improved_code && <p className="project-analysis-hint">The model did not return a safe complete replacement for this input. Review the findings below and try a smaller, self-contained snippet if appropriate.</p>}
+
           {result.findings.length === 0 ? <p className="project-analysis-hint">No actionable findings were returned. This does not guarantee the code is secure or bug-free.</p> : (
             <div className="project-security-findings">
               {result.findings.map((finding, index) => (
