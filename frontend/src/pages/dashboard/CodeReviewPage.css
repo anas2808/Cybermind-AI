@@ -17,11 +17,12 @@
 .code-review-stats > div { display: grid; gap: 4px; border: 1px solid var(--border-color, #334155); border-radius: 12px; padding: 14px; }
 .code-review-stats strong { font-size: 1.3rem; overflow-wrap: anywhere; }
 .code-review-stats span { color: var(--text-secondary, #94a3b8); font-size: .8rem; }
-.code-review-severity { border-radius: 999px; padding: 4px 9px; text-transform: capitalize; font-size: .72rem; font-weight: 700; }
-.severity-critical, .severity-high { color: #fecaca; background: #7f1d1d; }
-.severity-medium { color: #fde68a; background: #78350f; }
-.severity-low { color: #bfdbfe; background: #1e3a8a; }
-.severity-informational { color: #cbd5e1; background: #334155; }
+.code-review-severity { display: inline-flex; align-items: center; border: 1px solid transparent; border-radius: 999px; padding: 4px 9px; text-transform: capitalize; font-size: .72rem; font-weight: 700; letter-spacing: .02em; }
+.code-review-severity.severity-critical { color: #fee2e2; background: #991b1b; border-color: #ef4444; }
+.code-review-severity.severity-high { color: #ffedd5; background: #9a3412; border-color: #f97316; }
+.code-review-severity.severity-medium { color: #fef3c7; background: #854d0e; border-color: #eab308; }
+.code-review-severity.severity-low { color: #dbeafe; background: #1e40af; border-color: #60a5fa; }
+.code-review-severity.severity-informational { color: #e2e8f0; background: #334155; border-color: #64748b; }
 .code-review-evidence { white-space: pre-wrap; overflow-wrap: anywhere; border: 1px solid var(--border-color, #334155); border-radius: 8px; padding: 10px; background: var(--surface-input, #0b1220); color: var(--text-primary, #e2e8f0); font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 .code-review-limitations { margin-top: 20px; padding: 14px; border-radius: 10px; background: var(--surface-muted, rgba(148,163,184,.08)); font-size: .85rem; }
 .code-review-limitations ul { margin: 8px 0 0; padding-left: 20px; color: var(--text-secondary, #94a3b8); line-height: 1.6; }
