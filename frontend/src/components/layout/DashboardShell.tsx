@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ApiError, getProjects, type Project } from '../../lib/api'
 import { DashboardHome } from '../../pages/dashboard/DashboardHome'
 import { LogAnalysisPanel } from '../../pages/dashboard/LogAnalysisPanel'
+import { CodeReviewPage } from '../../pages/dashboard/CodeReviewPage'
 import { AIProvidersPage } from '../../pages/dashboard/AIProvidersPage'
 import { ProjectWorkspace } from '../../pages/dashboard/ProjectWorkspace'
 import { ProjectsPage } from '../../pages/dashboard/ProjectsPage'
@@ -170,6 +171,8 @@ export function DashboardShell({
                 setRoute({ workspace: 'projects', projectId })
               }}
             />
+          ) : activeItem === 'code-review' ? (
+            <CodeReviewPage />
           ) : activeItem === 'log-analyzer' ? (
             <LogAnalysisPanel />
           ) : activeItem === 'settings' ? (
