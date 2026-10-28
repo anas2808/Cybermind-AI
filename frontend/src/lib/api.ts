@@ -298,3 +298,44 @@ export async function analyzeSecurityLogs(providerId: string, modelId: string, f
   })
   return parseResponse<LogAnalysisResult>(response)
 }
+
+
+export type CodeReviewFinding = {
+  title: string
+  severity: 'critical' | 'high' | 'medium' | 'low' | 'informational'
+  category: string
+  line: number | null
+  evidence: string
+  explanation: string
+  recommendation: string
+}
+
+export type CodeReviewResult = {
+  provider_id: string
+  model_id: string
+  language: string
+  summary: string
+  findings: CodeReviewFinding[]
+  limitations: string[]
+}
+
+export async function reviewCode(
+  providerId: string,
+  modelId: string,
+  language: string,
+  code: string,
+  reviewFocus: string[],
+): Promise<CodeReviewResult> {
+  const response = await authenticatedFetch('/api/code-review/analyze', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      provider_id: providerId,
+      model_id: modelId,
+      language,
+      code,
+      review_focus: reviewFocus,
+    }),
+  })
+  return parseResponse<CodeReviewResult>(response)
+}
