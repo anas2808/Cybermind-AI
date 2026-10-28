@@ -30,4 +30,6 @@ class CodeReviewResponse(BaseModel):
     language: str
     summary: str
     findings: list[CodeReviewFinding]
+    improved_code: str | None = None
+    improvements_summary: list[str] = Field(default_factory=list)
     limitations: list[str] = Field(default_factory=list)
