@@ -10,6 +10,7 @@ Implementation added on `feature/code-reviewer`. Runtime verification and integr
 - The frontend calls `POST /api/code-review/analyze` with the existing Supabase bearer token.
 - The backend verifies the authenticated user owns the selected enabled provider and that the model belongs to that provider.
 - The existing AI gateway analyzes source text and returns normalized findings.
+- Findings display a distinct severity color: critical (red), high (orange), medium (yellow), low (blue), and informational (gray).
 - The user can export the resulting JSON report.
 
 ## Boundaries
@@ -26,5 +27,6 @@ Implementation added on `feature/code-reviewer`. Runtime verification and integr
 - [ ] Test missing/invalid bearer token.
 - [ ] Test provider/model ownership and disabled-provider rejection.
 - [ ] Test valid findings, empty findings, malformed model JSON, and provider errors.
+- [ ] Confirm severity badges are distinct and readable in light/dark themes.
 - [ ] Test large input and mobile layout.
 - [ ] Confirm secrets and source snippets are absent from application logs.
