@@ -87,7 +87,10 @@ async def review_code(
 
     payload = _parse_json(response.content)
     findings: list[dict[str, Any]] = []
-    for item in payload.get("findings", []):
+    raw_findings = payload.get("findings", [])
+    if not isinstance(raw_findings, list):
+        raw_findings = []
+    for item in raw_findings:
         if not isinstance(item, dict):
             continue
         severity = str(item.get("severity", "informational")).lower()
