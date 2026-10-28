@@ -19,7 +19,8 @@ Updated on `feature/code-reviewer`. Runtime verification and integration tests s
 - Caps output at 12 findings, 5 improvement bullets, and 3 limitations to reduce unnecessary output tokens; the backend enforces the 12-finding limit even if a model ignores the prompt.
 - Requests exact 1-based source line numbers and short evidence excerpts; the backend discards out-of-range lines and lines whose evidence does not match the indicated source line.
 - Requires calibrated severity and non-duplicate, actionable findings.
-- Requests complete replacement code only when the model can make a meaningful change without inventing missing project context; otherwise `improved_code` is null and the backend clears the improvement summary. The prompt explicitly checks imports, types/encodings, exception paths, resource cleanup, meaningful validation, placeholders, and platform-specific behavior.
+- Requests complete replacement code only when the model can make a meaningful change without inventing missing project context; otherwise `improved_code` is null and the backend clears the improvement summary. The prompt checks imports, types/encodings, exception paths, resource cleanup, meaningful validation, cross-function password-hash consistency, subprocess validation/timeouts, placeholders, and platform-specific behavior.
+- The backend rejects empty or NUL-containing replacement output and performs a Python AST syntax check when the declared language is Python. This is a syntax gate only; it does not prove correctness or security, and generated code is never executed.
 - Bounds returned text fields and rejects oversized improved-code output.
 
 ## Boundaries
@@ -33,6 +34,7 @@ Updated on `feature/code-reviewer`. Runtime verification and integration tests s
 ## Validation checklist
 - [ ] Run frontend TypeScript build and lint.
 - [ ] Run backend import/startup and API tests.
+- [ ] Confirm the GitHub Actions frontend build/lint and backend compile/unit-test jobs pass on `feature/code-reviewer`.
 - [ ] Test missing/invalid bearer token.
 - [ ] Test provider/model ownership and disabled-provider rejection.
 - [ ] Test valid findings, empty findings, malformed model JSON, and provider errors.
