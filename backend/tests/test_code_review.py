@@ -19,6 +19,27 @@ class CodeReviewValidationTests(unittest.TestCase):
         self.assertFalse(_replacement_is_valid("  ", "Python"))
         self.assertFalse(_replacement_is_valid("print('x')\x00", "Python"))
 
+
+    def test_rejects_hashlib_compare_digest_api_misuse(self):
+        code = "import hashlib\\ndef verify_password(password, stored):\\n    return hashlib.compare_digest(password, stored)\\n"
+        self.assertFalse(_replacement_is_valid(code, "Python"))
+
+    def test_rejects_general_hashes_for_password_storage(self):
+        code = "import hashlib\\ndef store_password(password):\\n    return hashlib.md5(password.encode()).hexdigest()\\n"
+        self.assertFalse(_replacement_is_valid(code, "Python"))
+
+    def test_rejects_shell_true_subprocess_calls(self):
+        code = "import subprocess\\ndef run_command(user_input):\\n    return subprocess.run(user_input, shell=True)\\n"
+        self.assertFalse(_replacement_is_valid(code, "Python"))
+
+    def test_auto_detect_checks_python_replacement(self):
+        code = "import hashlib\\ndef login(username, password):\\n    return hashlib.md5(password.encode()).hexdigest()\\n"
+        self.assertFalse(_replacement_is_valid(code, "auto-detect", source_code="import sqlite3\\ndef login(username, password):\\n    pass\\n"))
+
+    def test_safe_password_hash_api_is_not_flagged_as_weak_hash(self):
+        code = "import hmac\\ndef verify_password(password, stored):\\n    return hmac.compare_digest(password, stored)\\n"
+        self.assertTrue(_replacement_is_valid(code, "Python"))
+
     def test_parse_plain_json(self):
         self.assertEqual(_parse_json('{"findings": [], "improved_code": null}'), {
             "findings": [], "improved_code": None
