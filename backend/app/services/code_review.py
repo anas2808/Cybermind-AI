@@ -203,7 +203,7 @@ JSON escaping must be valid. Do not include the original source in the summary o
 
 def _replacement_is_valid(code: str, language: str) -> bool:
     """Apply safe, deterministic checks without executing model-generated code."""
-    if not code.strip() or "\\x00" in code:
+    if not code.strip() or "\x00" in code:
         return False
     normalized_language = language.strip().lower()
     if normalized_language in {"python", "py"}:
