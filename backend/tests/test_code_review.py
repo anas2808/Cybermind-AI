@@ -17,7 +17,7 @@ class CodeReviewValidationTests(unittest.TestCase):
 
     def test_empty_and_null_byte_replacements_are_rejected(self):
         self.assertFalse(_replacement_is_valid("  ", "Python"))
-        self.assertFalse(_replacement_is_valid("print('x')\\x00", "Python"))
+        self.assertFalse(_replacement_is_valid("print('x')\x00", "Python"))
 
     def test_parse_plain_json(self):
         self.assertEqual(_parse_json('{"findings": [], "improved_code": null}'), {
