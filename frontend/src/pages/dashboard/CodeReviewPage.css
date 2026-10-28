@@ -24,7 +24,12 @@
 .code-review-severity.severity-low { color: #dbeafe; background: #1e40af; border-color: #60a5fa; }
 .code-review-severity.severity-informational { color: #e2e8f0; background: #334155; border-color: #64748b; }
 .code-review-evidence { white-space: pre-wrap; overflow-wrap: anywhere; border: 1px solid var(--border-color, #334155); border-radius: 8px; padding: 10px; background: var(--surface-input, #0b1220); color: var(--text-primary, #e2e8f0); font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.code-review-improved { display: grid; gap: 12px; margin: 22px 0; padding: 18px; border: 1px solid var(--border-color, #334155); border-radius: 14px; }
+.code-review-improved-note { margin: 0; color: var(--text-secondary, #94a3b8); font-size: .85rem; line-height: 1.55; }
+.code-review-improvement-list { margin: 0; padding-left: 22px; color: var(--text-secondary, #cbd5e1); line-height: 1.65; font-size: .88rem; }
+.code-review-improved-source { max-height: 620px; overflow: auto; white-space: pre; overflow-wrap: normal; border: 1px solid var(--border-color, #334155); border-radius: 10px; padding: 16px; background: var(--surface-input, #0b1220); color: var(--text-primary, #e2e8f0); font: 12px/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.code-review-improved-source code { font: inherit; }
 .code-review-limitations { margin-top: 20px; padding: 14px; border-radius: 10px; background: var(--surface-muted, rgba(148,163,184,.08)); font-size: .85rem; }
 .code-review-limitations ul { margin: 8px 0 0; padding-left: 20px; color: var(--text-secondary, #94a3b8); line-height: 1.6; }
 .code-review-export { align-self: flex-start; }
-@media (max-width: 760px) { .code-review-header, .code-review-input-footer { flex-direction: column; align-items: stretch; } .code-review-privacy { max-width: none; } .code-review-stats { grid-template-columns: 1fr; } .code-review-focus { display: grid; } }
+@media (max-width: 760px) { .code-review-header, .code-review-input-footer { flex-direction: column; align-items: stretch; } .code-review-privacy { max-width: none; } .code-review-stats { grid-template-columns: 1fr; } .code-review-focus { display: grid; } .code-review-improved { padding: 12px; } }
