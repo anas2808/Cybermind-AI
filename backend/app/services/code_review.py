@@ -1,3 +1,4 @@
+import ast
 import json
 from typing import Any
 from uuid import UUID
@@ -168,6 +169,11 @@ JSON escaping must be valid. Do not include the original source in the summary o
         if len(improved_code) > 80000:
             improved_code = None
             limitations.append("Improved code was omitted because the model response exceeded the output size limit.")
+        elif not _replacement_is_valid(improved_code, language):
+            improved_code = None
+            limitations.append(
+                "Improved code was omitted because it failed basic syntax validation for the declared language."
+            )
 
     improvements_summary = payload.get("improvements_summary", [])
     if not isinstance(improvements_summary, list) or improved_code is None:
@@ -193,6 +199,19 @@ JSON escaping must be valid. Do not include the original source in the summary o
             "Code was reviewed as text and was not executed or tested.",
         ],
     }
+
+
+def _replacement_is_valid(code: str, language: str) -> bool:
+    """Apply safe, deterministic checks without executing model-generated code."""
+    if not code.strip() or "\\x00" in code:
+        return False
+    normalized_language = language.strip().lower()
+    if normalized_language in {"python", "py"}:
+        try:
+            ast.parse(code)
+        except (SyntaxError, ValueError, TypeError, MemoryError, RecursionError):
+            return False
+    return True
 
 
 def _parse_json(content: str) -> dict[str, Any]:
