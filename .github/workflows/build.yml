@@ -28,6 +28,10 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    env:
+      DATABASE_URL: sqlite:///:memory:
+      SUPABASE_URL: https://example.supabase.co
+      SUPABASE_KEY: test-key
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
