@@ -788,3 +788,75 @@ button { font: inherit; cursor: pointer; }
 .dashboard-connection-state {
   margin-top: 18px;
 }
+
+
+/* Responsive capability cards: keep every text block inside its own tile. */
+.capability-tiles {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  align-items: stretch;
+  gap: 10px;
+}
+.capability-tile {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 112px;
+  grid-template-columns: 37px minmax(0, 1fr) 13px;
+  grid-template-rows: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px 9px;
+  overflow: hidden;
+}
+.capability-tile-icon {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  flex-shrink: 0;
+}
+.capability-tile-copy {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  max-width: 100%;
+  align-self: start;
+  overflow-wrap: anywhere;
+}
+.capability-tile-copy strong,
+.capability-tile-copy small {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+.capability-tile-copy small {
+  line-height: 1.4;
+}
+.capability-arrow {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+}
+.capability-badge {
+  grid-column: 2 / span 2;
+  grid-row: 2;
+  max-width: 100%;
+  white-space: nowrap;
+}
+.capability-tile-action {
+  appearance: none;
+  -webkit-appearance: none;
+}
+@media (max-width: 700px) {
+  .capability-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 460px) {
+  .capability-tiles {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .capabilities-panel {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+}
