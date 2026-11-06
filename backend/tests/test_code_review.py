@@ -26,7 +26,7 @@ class CodeReviewValidationTests(unittest.TestCase):
 
     def test_empty_and_null_byte_replacements_are_rejected(self):
         self.assertFalse(_replacement_is_valid("  ", "Python"))
-        self.assertFalse(_replacement_is_valid("print('x')\\x00", "Python"))
+        self.assertFalse(_replacement_is_valid("print('x')\x00", "Python"))
 
     def test_rejects_hashlib_compare_digest_api_misuse(self):
         code = """import hashlib
