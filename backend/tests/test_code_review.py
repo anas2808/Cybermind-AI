@@ -1,7 +1,7 @@
 import os
 import unittest
 
-# Supply inert settings so pure validation helpers can be tested without secrets or a live database.
+# Use inert configuration so validation helpers can be tested without secrets or a live database.
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 os.environ.setdefault("SUPABASE_URL", "https://example.supabase.co")
 os.environ.setdefault("SUPABASE_KEY", "test-key")
@@ -13,7 +13,10 @@ from app.services.code_review import _parse_json, _replacement_is_valid, _safe_t
 
 class CodeReviewValidationTests(unittest.TestCase):
     def test_valid_python_replacement_is_accepted(self):
-        self.assertTrue(_replacement_is_valid("def greet(name):\n    return name.strip()\n", "Python"))
+        code = """def greet(name):
+    return name.strip()
+"""
+        self.assertTrue(_replacement_is_valid(code, "Python"))
 
     def test_invalid_python_replacement_is_rejected(self):
         self.assertFalse(_replacement_is_valid("def broken(:\n    pass\n", "Python"))
@@ -23,36 +26,58 @@ class CodeReviewValidationTests(unittest.TestCase):
 
     def test_empty_and_null_byte_replacements_are_rejected(self):
         self.assertFalse(_replacement_is_valid("  ", "Python"))
-        self.assertFalse(_replacement_is_valid("print('x')\x00", "Python"))
-
+        self.assertFalse(_replacement_is_valid("print('x')\\x00", "Python"))
 
     def test_rejects_hashlib_compare_digest_api_misuse(self):
-        code = "import hashlib\ndef verify_password(password, stored):\\n    return hashlib.compare_digest(password, stored)\\n"
+        code = """import hashlib
+def verify_password(password, stored):
+    return hashlib.compare_digest(password, stored)
+"""
         self.assertFalse(_replacement_is_valid(code, "Python"))
 
     def test_rejects_general_hashes_for_password_storage(self):
-        code = "import hashlib\\ndef store_password(password):\\n    return hashlib.md5(password.encode()).hexdigest()\\n"
+        code = """import hashlib
+def store_password(password):
+    return hashlib.md5(password.encode()).hexdigest()
+"""
         self.assertFalse(_replacement_is_valid(code, "Python"))
 
     def test_rejects_shell_true_subprocess_calls(self):
-        code = "import subprocess\\ndef run_command(user_input):\\n    return subprocess.run(user_input, shell=True)\\n"
+        code = """import subprocess
+def run_command(user_input):
+    return subprocess.run(user_input, shell=True)
+"""
         self.assertFalse(_replacement_is_valid(code, "Python"))
 
     def test_auto_detect_checks_python_replacement(self):
-        code = "import hashlib\\ndef login(username, password):\\n    return hashlib.md5(password.encode()).hexdigest()\\n"
-        self.assertFalse(_replacement_is_valid(code, "auto-detect", source_code="import sqlite3\\ndef login(username, password):\\n    pass\\n"))
+        code = """import hashlib
+def login(username, password):
+    return hashlib.md5(password.encode()).hexdigest()
+"""
+        source = """import sqlite3
+def login(username, password):
+    pass
+"""
+        self.assertFalse(_replacement_is_valid(code, "auto-detect", source_code=source))
 
     def test_safe_password_hash_api_is_not_flagged_as_weak_hash(self):
-        code = "import hmac\\ndef verify_password(password, stored):\\n    return hmac.compare_digest(password, stored)\\n"
+        code = """import hmac
+def verify_password(password, stored):
+    return hmac.compare_digest(password, stored)
+"""
         self.assertTrue(_replacement_is_valid(code, "Python"))
 
     def test_parse_plain_json(self):
-        self.assertEqual(_parse_json('{"findings": [], "improved_code": null}'), {
-            "findings": [], "improved_code": None
-        })
+        self.assertEqual(
+            _parse_json('{"findings": [], "improved_code": null}'),
+            {"findings": [], "improved_code": None},
+        )
 
     def test_parse_fenced_json(self):
-        self.assertEqual(_parse_json('```json\n{"findings": []}\n```'), {"findings": []})
+        self.assertEqual(
+            _parse_json(' ```json\n{"findings": []}\n``` '),
+            {"findings": []},
+        )
 
     def test_invalid_json_returns_gateway_error(self):
         with self.assertRaises(HTTPException) as caught:
