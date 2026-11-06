@@ -8,7 +8,12 @@ os.environ.setdefault("SUPABASE_KEY", "test-key")
 
 from fastapi import HTTPException
 
-from app.services.code_review import _parse_json, _replacement_is_valid, _safe_text
+from app.services.code_review import (
+    _parse_json,
+    _replacement_is_valid,
+    _resolve_evidence_line,
+    _safe_text,
+)
 
 
 class CodeReviewValidationTests(unittest.TestCase):
@@ -66,6 +71,14 @@ def verify_password(password, stored):
     return hmac.compare_digest(password, stored)
 """
         self.assertTrue(_replacement_is_valid(code, "Python"))
+
+    def test_resolves_line_from_unique_exact_evidence(self):
+        lines = ['API_KEY = "placeholder"', 'print(hash_password("admin123"))']
+        self.assertEqual(_resolve_evidence_line('print(hash_password("admin123"))', lines), 2)
+
+    def test_ambiguous_evidence_does_not_guess_line(self):
+        lines = ["return value", "return value"]
+        self.assertIsNone(_resolve_evidence_line("return value", lines))
 
     def test_parse_plain_json(self):
         self.assertEqual(
