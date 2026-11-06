@@ -150,6 +150,11 @@ export function DashboardShell({
               projects={projects}
               apiStatus={apiStatus}
               onViewProjects={() => handleNavigation({ id: 'projects', label: 'Projects', available: true })}
+              onNavigate={(id) => handleNavigation({ id, label: navigationLabel(id), available: true })}
+              onProjectOpen={(projectId) => {
+                updateWorkspaceUrl('projects', projectId)
+                setRoute({ workspace: 'projects', projectId })
+              }}
             />
           ) : activeItem === 'projects' && route.projectId ? (
             <ProjectWorkspace
