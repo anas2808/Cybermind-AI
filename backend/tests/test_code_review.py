@@ -1,4 +1,10 @@
+import os
 import unittest
+
+# Supply inert settings so pure validation helpers can be tested without secrets or a live database.
+os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
+os.environ.setdefault("SUPABASE_URL", "https://example.supabase.co")
+os.environ.setdefault("SUPABASE_KEY", "test-key")
 
 from fastapi import HTTPException
 
@@ -21,7 +27,7 @@ class CodeReviewValidationTests(unittest.TestCase):
 
 
     def test_rejects_hashlib_compare_digest_api_misuse(self):
-        code = "import hashlib\\ndef verify_password(password, stored):\\n    return hashlib.compare_digest(password, stored)\\n"
+        code = "import hashlib\ndef verify_password(password, stored):\\n    return hashlib.compare_digest(password, stored)\\n"
         self.assertFalse(_replacement_is_valid(code, "Python"))
 
     def test_rejects_general_hashes_for_password_storage(self):
