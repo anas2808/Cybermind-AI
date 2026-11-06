@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main]
+    branches: [main, feature/code-reviewer]
 
 jobs:
   frontend:
@@ -28,6 +28,10 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    env:
+      DATABASE_URL: sqlite:///:memory:
+      SUPABASE_URL: https://example.supabase.co
+      SUPABASE_KEY: test-key
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -36,3 +40,4 @@ jobs:
       - run: python -m pip install --upgrade pip
       - run: pip install -r requirements.txt
       - run: python -m compileall app
+      - run: python -m unittest discover -s tests -v

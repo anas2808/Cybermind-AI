@@ -10,6 +10,7 @@ from app.api.routes.ai_providers import router as ai_providers_router
 from app.api.routes.project_analysis import router as project_analysis_router
 from app.api.routes.feature_analysis import router as feature_analysis_router
 from app.api.routes.log_analysis import router as log_analysis_router
+from app.api.routes.code_review import router as code_review_router
 
 app = FastAPI(
     title="CyberMind AI",
@@ -35,6 +36,7 @@ app.include_router(ai_providers_router)
 app.include_router(project_analysis_router)
 app.include_router(feature_analysis_router)
 app.include_router(log_analysis_router)
+app.include_router(code_review_router)
 
 
 @app.get("/")
