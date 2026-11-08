@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     SUPABASE_URL: str
     SUPABASE_KEY: str
     AI_PROVIDER_ENCRYPTION_KEY: str | None = None
+    ALLOW_LOCAL_OLLAMA: bool = False
 
     model_config = SettingsConfigDict(
         env_file=".env",

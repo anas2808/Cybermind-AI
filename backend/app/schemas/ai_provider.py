@@ -7,14 +7,14 @@ from pydantic import BaseModel, ConfigDict, Field
 class AIProviderCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     provider_type: str = Field(min_length=1, max_length=100)
-    endpoint: str = Field(min_length=1)
+    endpoint: str = Field(min_length=1, max_length=2048)
     auth_type: str = Field(default="none", min_length=1, max_length=50)
     credentials: dict[str, str] | None = None
 
 
 class AIProviderUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
-    endpoint: str | None = Field(default=None, min_length=1)
+    endpoint: str | None = Field(default=None, min_length=1, max_length=2048)
     auth_type: str | None = Field(default=None, min_length=1, max_length=50)
     credentials: dict[str, str] | None = None
     enabled: bool | None = None

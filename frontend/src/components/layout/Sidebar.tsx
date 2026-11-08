@@ -34,8 +34,8 @@ const navigationGroups: NavigationGroup[] = [
   {
     label: 'Security Analyst',
     items: [
-      { label: 'Code Review', id: 'code-review' },
-      { label: 'Log Analyzer', id: 'log-analyzer' },
+      { label: 'Code Review', id: 'code-review', available: true },
+      { label: 'Log Analysis', id: 'log-analyzer', available: true },
       { label: 'Threat Intelligence', id: 'threat-intelligence' },
     ],
   },
