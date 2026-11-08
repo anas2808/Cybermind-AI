@@ -1,9 +1,8 @@
 import time
 from typing import Any
 
-import httpx
-
 from app.ai.gateway import AIAnalysisRequest, AIAnalysisResponse, AIProviderAdapter, AIUsage
+from app.ai.outbound import ProtectedAsyncClient
 
 
 class OpenAICompatibleAdapter(AIProviderAdapter):
@@ -21,12 +20,12 @@ class OpenAICompatibleAdapter(AIProviderAdapter):
         headers = {"Content-Type": "application/json"}
         api_key = (credentials or {}).get("api_key")
         if api_key:
-            headers["Authorization"] = f"Bearer {api_key}"
+            headers["Authorization"] = "Bearer " + api_key
         return headers
 
     async def test_connection(self, endpoint: str, credentials: dict[str, str] | None):
         started = time.perf_counter()
-        async with httpx.AsyncClient(timeout=15) as client:
+        async with ProtectedAsyncClient(endpoint, self.provider_type, 15, credentials) as client:
             response = await client.get(
                 f"{endpoint.rstrip('/')}/models",
                 headers=self._headers(credentials),
@@ -35,7 +34,7 @@ class OpenAICompatibleAdapter(AIProviderAdapter):
         return "connected", int((time.perf_counter() - started) * 1000)
 
     async def discover_models(self, endpoint: str, credentials: dict[str, str] | None):
-        async with httpx.AsyncClient(timeout=20) as client:
+        async with ProtectedAsyncClient(endpoint, self.provider_type, 20, credentials) as client:
             response = await client.get(
                 f"{endpoint.rstrip('/')}/models",
                 headers=self._headers(credentials),
@@ -82,7 +81,7 @@ class OpenAICompatibleAdapter(AIProviderAdapter):
         }
         payload.update(request.options or {})
 
-        async with httpx.AsyncClient(timeout=120) as client:
+        async with ProtectedAsyncClient(endpoint, self.provider_type, 120, credentials) as client:
             response = await client.post(
                 f"{endpoint.rstrip('/')}/chat/completions",
                 headers=self._headers(credentials),

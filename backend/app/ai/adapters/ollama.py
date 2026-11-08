@@ -1,9 +1,8 @@
 import time
 from typing import Any
 
-import httpx
-
 from app.ai.gateway import AIAnalysisRequest, AIAnalysisResponse, AIProviderAdapter, AIUsage
+from app.ai.outbound import ProtectedAsyncClient
 
 
 class OllamaAdapter(AIProviderAdapter):
@@ -13,7 +12,7 @@ class OllamaAdapter(AIProviderAdapter):
         self, endpoint: str, credentials: dict[str, str] | None
     ) -> tuple[str, int | None]:
         started = time.perf_counter()
-        async with httpx.AsyncClient(timeout=10) as client:
+        async with ProtectedAsyncClient(endpoint, self.provider_type, 10) as client:
             response = await client.get(f"{endpoint.rstrip('/')}/api/tags")
             response.raise_for_status()
         latency_ms = int((time.perf_counter() - started) * 1000)
@@ -22,7 +21,7 @@ class OllamaAdapter(AIProviderAdapter):
     async def discover_models(
         self, endpoint: str, credentials: dict[str, str] | None
     ) -> list[dict[str, Any]]:
-        async with httpx.AsyncClient(timeout=15) as client:
+        async with ProtectedAsyncClient(endpoint, self.provider_type, 15) as client:
             response = await client.get(f"{endpoint.rstrip('/')}/api/tags")
             response.raise_for_status()
             payload = response.json()
@@ -55,7 +54,7 @@ class OllamaAdapter(AIProviderAdapter):
         )
         started = time.perf_counter()
 
-        async with httpx.AsyncClient(timeout=120) as client:
+        async with ProtectedAsyncClient(endpoint, self.provider_type, 120) as client:
             response = await client.post(
                 f"{endpoint.rstrip('/')}/api/generate",
                 json={

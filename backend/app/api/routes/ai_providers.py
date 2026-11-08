@@ -24,6 +24,7 @@ from app.services.ai_provider import (
     get_owned_provider,
     test_provider,
 )
+from app.ai.outbound import ProviderEndpointError, validate_provider_endpoint
 
 
 router = APIRouter(
@@ -59,6 +60,10 @@ async def create_provider(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    try:
+        await validate_provider_endpoint(provider_data.endpoint, provider_data.provider_type)
+    except ProviderEndpointError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     user = _get_user(db, current_user)
     if not user:
         user = User(
@@ -109,6 +114,10 @@ async def update_provider(
     if provider_data.name is not None:
         provider.name = provider_data.name.strip()
     if provider_data.endpoint is not None:
+        try:
+            await validate_provider_endpoint(provider_data.endpoint, provider.provider_type)
+        except ProviderEndpointError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         provider.endpoint = provider_data.endpoint.strip().rstrip("/")
     if provider_data.auth_type is not None:
         provider.auth_type = provider_data.auth_type.strip().lower()
@@ -155,7 +164,7 @@ async def test_ai_provider(
         db.commit()
         raise HTTPException(
             status_code=502,
-            detail=f"AI provider connection failed: {exc}",
+            detail="AI provider connection failed. Check the endpoint and credentials.",
         ) from exc
 
     return ProviderTestResponse(
@@ -185,7 +194,7 @@ async def discover_models(
     except Exception as exc:
         raise HTTPException(
             status_code=502,
-            detail=f"Model discovery failed: {exc}",
+            detail="Model discovery failed. Check the endpoint and credentials.",
         ) from exc
 
     return ModelDiscoveryResponse(
