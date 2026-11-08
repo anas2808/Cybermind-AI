@@ -15,6 +15,7 @@ from app.ai.adapters.openai_compatible import OpenAICompatibleAdapter
 from app.ai.outbound import (
     ProtectedAsyncClient,
     ProviderEndpointError,
+    _PinnedNetworkBackend,
     validate_provider_endpoint,
 )
 from app.core import config
@@ -85,6 +86,118 @@ class ProviderEndpointPolicyTests(unittest.IsolatedAsyncioTestCase):
             ) as client:
                 with self.assertRaises(ProviderEndpointError):
                     await client.get("https://provider.example/models")
+
+    async def test_actual_connection_is_pinned_to_validated_ipv4(self):
+        class RecordingBackend:
+            def __init__(self):
+                self.connection = None
+
+            async def connect_tcp(self, host, port, **kwargs):
+                self.connection = (host, port)
+                return object()
+
+            async def sleep(self, seconds):
+                return None
+
+        recording = RecordingBackend()
+        backend = _PinnedNetworkBackend("https://provider.example", "openai_compatible")
+        backend._backend = recording
+        with patch(
+            "app.ai.outbound.socket.getaddrinfo",
+            return_value=resolved("93.184.216.34"),
+        ):
+            stream = await backend.connect_tcp("provider.example", 443)
+        self.assertIsNotNone(stream)
+        self.assertEqual(recording.connection, ("93.184.216.34", 443))
+
+    async def test_actual_connection_is_pinned_to_validated_ipv6(self):
+        class RecordingBackend:
+            async def connect_tcp(self, host, port, **kwargs):
+                self.connection = (host, port)
+                return object()
+
+            async def sleep(self, seconds):
+                return None
+
+        recording = RecordingBackend()
+        backend = _PinnedNetworkBackend("https://provider.example", "openai_compatible")
+        backend._backend = recording
+        with patch(
+            "app.ai.outbound.socket.getaddrinfo",
+            return_value=resolved("2606:4700:4700::1111"),
+        ):
+            await backend.connect_tcp("provider.example", 443)
+        self.assertEqual(recording.connection, ("2606:4700:4700::1111", 443))
+
+    async def test_mixed_public_and_private_dns_answers_never_connect(self):
+        class RecordingBackend:
+            def __init__(self):
+                self.called = False
+
+            async def connect_tcp(self, host, port, **kwargs):
+                self.called = True
+                return object()
+
+            async def sleep(self, seconds):
+                return None
+
+        recording = RecordingBackend()
+        backend = _PinnedNetworkBackend("https://provider.example", "openai_compatible")
+        backend._backend = recording
+        with patch(
+            "app.ai.outbound.socket.getaddrinfo",
+            return_value=resolved("93.184.216.34", "10.0.0.8"),
+        ):
+            with self.assertRaises(ProviderEndpointError):
+                await backend.connect_tcp("provider.example", 443)
+        self.assertFalse(recording.called)
+
+    async def test_rebinding_to_private_address_is_blocked_at_connection(self):
+        class RecordingBackend:
+            def __init__(self):
+                self.connections = []
+
+            async def connect_tcp(self, host, port, **kwargs):
+                self.connections.append((host, port))
+                return object()
+
+            async def sleep(self, seconds):
+                return None
+
+        recording = RecordingBackend()
+        backend = _PinnedNetworkBackend("https://provider.example", "openai_compatible")
+        backend._backend = recording
+        with patch(
+            "app.ai.outbound.socket.getaddrinfo",
+            side_effect=[
+                resolved("93.184.216.34"),
+                resolved("127.0.0.1"),
+            ],
+        ):
+            await backend.connect_tcp("provider.example", 443)
+            with self.assertRaises(ProviderEndpointError):
+                await backend.connect_tcp("provider.example", 443)
+        self.assertEqual(recording.connections, [("93.184.216.34", 443)])
+
+    async def test_local_ollama_connection_can_only_pin_to_loopback(self):
+        class RecordingBackend:
+            async def connect_tcp(self, host, port, **kwargs):
+                self.connection = (host, port)
+                return object()
+
+            async def sleep(self, seconds):
+                return None
+
+        recording = RecordingBackend()
+        backend = _PinnedNetworkBackend("http://[::1]:11434", "ollama")
+        backend._backend = recording
+        with patch.object(config.settings, "ALLOW_LOCAL_OLLAMA", True):
+            with patch(
+                "app.ai.outbound.socket.getaddrinfo",
+                return_value=resolved("::1"),
+            ):
+                await backend.connect_tcp("::1", 11434)
+        self.assertEqual(recording.connection, ("::1", 11434))
 
     async def test_allows_valid_https_endpoint(self):
         with patch(

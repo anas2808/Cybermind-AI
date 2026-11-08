@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from urllib.parse import SplitResult, urlsplit
 
 import httpx
+import httpcore
+from httpcore._backends.auto import AutoBackend
 
 from app.core.config import settings
 
@@ -18,6 +20,37 @@ class ValidatedEndpoint:
     url: str
     parsed: SplitResult
     addresses: tuple[ipaddress.IPv4Address | ipaddress.IPv6Address, ...]
+
+
+def _resolve_addresses(parsed: SplitResult) -> tuple[
+    ipaddress.IPv4Address | ipaddress.IPv6Address, ...
+]:
+    host = parsed.hostname or ""
+    try:
+        literal = ipaddress.ip_address(host)
+    except ValueError:
+        literal = None
+    if literal is not None:
+        return (literal,)
+
+    try:
+        resolved = socket.getaddrinfo(
+            host,
+            parsed.port,
+            type=socket.SOCK_STREAM,
+        )
+    except (OSError, ValueError) as exc:
+        raise ProviderEndpointError("Provider endpoint could not be resolved") from exc
+    addresses = tuple(
+        dict.fromkeys(
+            ipaddress.ip_address(item[4][0])
+            for item in resolved
+            if item[4] and item[4][0]
+        )
+    )
+    if not addresses:
+        raise ProviderEndpointError("Provider endpoint could not be resolved")
+    return addresses
 
 
 def _is_local_ollama_host(host: str) -> bool:
@@ -41,6 +74,16 @@ def _blocked_address(address: ipaddress.IPv4Address | ipaddress.IPv6Address) -> 
         or address.is_multicast
         or not address.is_global
     )
+
+
+def _validate_addresses(
+    addresses: tuple[ipaddress.IPv4Address | ipaddress.IPv6Address, ...],
+    local_ollama: bool,
+) -> None:
+    if not local_ollama and any(_blocked_address(address) for address in addresses):
+        raise ProviderEndpointError("Provider endpoint resolves to a prohibited network")
+    if local_ollama and any(not address.is_loopback for address in addresses):
+        raise ProviderEndpointError("Local Ollama endpoint must resolve to loopback")
 
 
 def _parse_endpoint(endpoint: str) -> SplitResult:
@@ -85,36 +128,9 @@ async def validate_provider_endpoint(
         "instance-data.ec2.internal",
     }:
         raise ProviderEndpointError("Provider endpoint is prohibited")
-    try:
-        literal = ipaddress.ip_address(host)
-    except ValueError:
-        literal = None
-    if literal is not None:
-        addresses = (literal,)
-    else:
-        try:
-            resolved = await asyncio.to_thread(
-                socket.getaddrinfo,
-                host,
-                parsed.port,
-                type=socket.SOCK_STREAM,
-            )
-        except (OSError, ValueError) as exc:
-            raise ProviderEndpointError("Provider endpoint could not be resolved") from exc
-        addresses = tuple(
-            dict.fromkeys(
-                ipaddress.ip_address(item[4][0])
-                for item in resolved
-                if item[4] and item[4][0]
-            )
-        )
-        if not addresses:
-            raise ProviderEndpointError("Provider endpoint could not be resolved")
+    addresses = await asyncio.to_thread(_resolve_addresses, parsed)
 
-    if not local_ollama and any(_blocked_address(address) for address in addresses):
-        raise ProviderEndpointError("Provider endpoint resolves to a prohibited network")
-    if local_ollama and any(not address.is_loopback for address in addresses):
-        raise ProviderEndpointError("Local Ollama endpoint must resolve to loopback")
+    _validate_addresses(addresses, local_ollama)
 
     return ValidatedEndpoint(
         url=endpoint.strip().rstrip("/"),
@@ -123,8 +139,69 @@ async def validate_provider_endpoint(
     )
 
 
+class _PinnedNetworkBackend(httpcore.AsyncNetworkBackend):
+    """Resolve and validate a provider hostname before connecting to its IP."""
+
+    def __init__(self, endpoint: str, provider_type: str):
+        self._parsed = _parse_endpoint(endpoint)
+        self._provider_type = provider_type
+        self._port = self._parsed.port or (
+            443 if self._parsed.scheme == "https" else 80
+        )
+        self._local_ollama = (
+            provider_type.strip().lower() == "ollama"
+            and _is_local_ollama_host(self._parsed.hostname or "")
+        )
+        self._backend = AutoBackend()
+
+    async def connect_tcp(
+        self,
+        host: str,
+        port: int,
+        timeout: float | None = None,
+        local_address: str | None = None,
+        socket_options=None,
+    ):
+        configured_host = (self._parsed.hostname or "").rstrip(".").lower()
+        if host.rstrip(".").lower() != configured_host or port != self._port:
+            raise ProviderEndpointError(
+                "Provider request destination does not match the configured endpoint"
+            )
+        if self._local_ollama and not settings.ALLOW_LOCAL_OLLAMA:
+            raise ProviderEndpointError("Local Ollama access is disabled")
+
+        addresses = await asyncio.to_thread(_resolve_addresses, self._parsed)
+        _validate_addresses(addresses, self._local_ollama)
+        return await self._backend.connect_tcp(
+            str(addresses[0]),
+            self._port,
+            timeout=timeout,
+            local_address=local_address,
+            socket_options=socket_options,
+        )
+
+    async def connect_unix_socket(self, path: str, timeout: float | None = None, socket_options=None):
+        raise ProviderEndpointError("Unix socket provider endpoints are not permitted")
+
+    async def sleep(self, seconds: float) -> None:
+        await self._backend.sleep(seconds)
+
+
+class _PinnedHTTPTransport(httpx.AsyncHTTPTransport):
+    def __init__(self, endpoint: str, provider_type: str):
+        super().__init__(trust_env=False, retries=0)
+        self._pool = httpcore.AsyncConnectionPool(
+            ssl_context=self._pool._ssl_context,
+            max_connections=100,
+            max_keepalive_connections=20,
+            keepalive_expiry=5.0,
+            retries=0,
+            network_backend=_PinnedNetworkBackend(endpoint, provider_type),
+        )
+
+
 class ProtectedAsyncClient:
-    """HTTPX client that revalidates the destination immediately before sending."""
+    """HTTPX client that pins each connection to a validated destination IP."""
 
     def __init__(
         self,
@@ -136,12 +213,13 @@ class ProtectedAsyncClient:
     ):
         self._endpoint = endpoint
         self._provider_type = provider_type
-        base_transport = transport or httpx.AsyncHTTPTransport(retries=0)
+        if transport is None:
+            transport = _PinnedHTTPTransport(endpoint, provider_type)
         self._client = httpx.AsyncClient(
             timeout=httpx.Timeout(timeout),
             follow_redirects=False,
             trust_env=False,
-            transport=_ProtectedTransport(base_transport, endpoint, provider_type),
+            transport=_ProtectedTransport(transport, endpoint, provider_type),
         )
 
     async def __aenter__(self) -> "ProtectedAsyncClient":
